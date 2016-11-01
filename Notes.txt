@@ -1,0 +1,12 @@
+V1: 
+-It's not converging;
+-Corner solutions haven't been taken into account;
+-It will never converge, for the future choices are the same as the current; but
+they are in a different state! brt1,bft1,bgt1 must all be changed.
+
+Current:
+-Modification from V1 -> For a given state of nature, the agent's current 
+choice will be evaluated on tomorrow's bonds holding as well;
+-All solutions (corner and interior) will be calculated separately in
+different functions;
+-brt1, bft1 and bgt1, will be calculated differently from the above case;
