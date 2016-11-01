@@ -39,13 +39,15 @@ epsilon = 1e-3;                                     %Tolerance level
 beta = .95;                                         %Intertemporal discount rate
 gamma = .15;                                        %Degree of wealth heterogeneity
 Qr = [1;1+gamma;1-gamma];                        %(Fraction of)Wealth vector for the RESIDENT consumer
-Qf = [1;1-gamma;1+gamma];                        %(Fraction of)Wealth vector for the FOREIGN consumer
-sigma = 2;                                          %Utility function parameter: risk aversion
+Qf = [1;1-gamma;1+gamma];                        %(Fraction of)Wealth vector for the FOREIGN consumer                                                                                        
+sigma.r = 2;                                     %Utility function parameter: risk aversion
+sigma.f = 2;
 
 %Firm
 alpha = .3;                                         %Participation of capital on production (Sosa)
 
 %Government
+sigma.g = 2;                                        %Utility function parameter: risk aversion
 phi = .282;                                         %Probability of redemption (Arellano)
 theta = .2;                                         %Government preference parameter: foreigners relative to residents
 tc = .3;                                            %Tax rate over CONSUMPTION
