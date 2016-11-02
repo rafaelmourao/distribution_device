@@ -1,4 +1,4 @@
-function [status p br bf B] = Interior_Solution(s_par,s_grid,s_state,s_gov,s_investors)
+function [status, p, br, bf, B] = Interior_Solution(s_par,s_grid,s_state,s_gov,s_investors)
 
 %% VARIABLES NEEDED
 
