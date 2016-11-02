@@ -263,7 +263,9 @@ while dist > epsilon && t <= 200
                 
                 Vnd1(n,id_br,id_bf) = Wnd + beta*(probt * Vo0(:,id_br_s,id_br_f));
                 
+                if ( Vnd1(n,id_br,id_bf) > Vd0(n) )
                     z1(n,id_br,id_bf) = 1
+                    Vo1(n,id_br,id_bf) = Vnd(n,id_br,id_bf)
                 else
                     z1(n,id_br,id_bf) = 1
                     Vo1(n,id_br,id_bf) = Vd0(n)
