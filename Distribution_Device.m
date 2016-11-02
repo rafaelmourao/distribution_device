@@ -266,9 +266,9 @@ while dist > epsilon && t <= 200
                 
                 if ( Vnd1(n,id_br,id_bf) > Vd0(n) )
                     z1(n,id_br,id_bf) = 1
-                    Vo1(n,id_br,id_bf) = Vnd(n,id_br,id_bf)
+                    Vo1(n,id_br,id_bf) = Vnd1(n,id_br,id_bf)
                 else
-                    z1(n,id_br,id_bf) = 1
+                    z1(n,id_br,id_bf) = 0
                     Vo1(n,id_br,id_bf) = Vd0(n)
                 end
                 
@@ -278,7 +278,7 @@ while dist > epsilon && t <= 200
         
     end
     
-    Vd1 = Wd + prob * ( phi * Vo1(:,1,1) + (1-phi) * Vd0 );
+    Vd1 = Wd + beta * prob * ( phi * Vo1(:,1,1) + (1-phi) * Vd0 );
     
     dist = sum(q1(:) - q0(:))^2
     
