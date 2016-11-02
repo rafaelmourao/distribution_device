@@ -54,25 +54,24 @@ cwt1 = squeeze(cw0(:,:,1));
 
 denom_g = tc*(crt+cwt) - bgt_1/lambdat + p*grid_r_g';
 
-num_g = (zt1.^(-1/sigma)).*(((tc*lambda)*ones(1,l_grid_r)).*(crt1+cwt1) - ones(n_states,1)*grid_r_g +...
+num_g = (zt1.^(-1/sigma.g)).*(((tc*lambda)*ones(1,l_grid_r)).*(crt1+cwt1) - ones(n_states,1)*grid_r_g +...
                 (lambda*ones(1,l_grid_r)).*qt1.*zt1.*bgt1);
 
-ratio_g = Euler_ratio(s_par,s_state,num_g,denom_g);
+ratio_g = Euler_ratio(s_par,s_state,num_g,denom_g,'g');
 
 euler_g = abs(ratio_g - p);
 
 
-denom_r = ((1+rt).^((sigma-1)/sigma)).*(Qrt + brt_1/lambdat - p*grid_r');
+denom_r = ((1+rt).^((sigma.r-1)/sigma.r)).*(Qrt + brt_1/lambdat - p*grid_r');
 
-num_r = ((zt1.^(-1/sigma)).*((1+rt1).^((sigma-1)/sigma))).*...
+num_r = ((zt1.^(-1/sigma.r)).*((1+rt1).^((sigma.r-1)/sigma.r))).*...
         ((lambda.*Qr)*ones(1,l_grid_r) + ones(n_states,1)*grid_r - (lambda*ones(1,l_grid_r)).*qt1.*zt1.*brt1);
             
-ratio_r = Euler_ratio(s_par,s_state,num_r,denom_r);
+ratio_r = Euler_ratio(s_par,s_state,num_r,denom_r,'r');
 
 euler_r = abs(p - ratio_r);
 
 [varargout{1}, b_star] = min(euler_g + euler_r);
-
 
 Bt = grid_r_g(b_star);
 

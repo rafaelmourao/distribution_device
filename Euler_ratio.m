@@ -1,4 +1,4 @@
-function ratio = Euler_ratio(s_par,s_state,x,y)
+function ratio = Euler_ratio(s_par,s_state,x,y, type)
 
 % Important remark: the 'x' refers to the NUMERATOR while the 'y' refers to
 % the DENOMINATOR. The former is inouted as a 'n_states x length_grid'
@@ -7,7 +7,7 @@ function ratio = Euler_ratio(s_par,s_state,x,y)
 %% VARIABLES NEEDED
 
 %Parameters
-sigma = s_par.sigma;
+sigma = s_par.sigma.(type);
 beta = s_par.beta;
 prob = s_par.prob;
 n_states = s_par.n_states;

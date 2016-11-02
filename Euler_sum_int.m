@@ -50,22 +50,22 @@ bft1 = s_investors.bft1;
 %FIX THAT LATER
 
 denom_g = Qgt + tc*(crt+cwt) - bgt_1/lambdat + p*grid_g';
-num_g = (zt1.^(-1/sigma)).*(Qg*ones(1,l_grid_g) + (tc*lambda)*ones(1,l_grid_g).*(crt1+cwt1) - ones(n_states,1)*grid_g +...
+num_g = (zt1.^(-1/sigma.g)).*(Qg*ones(1,l_grid_g) + (tc*lambda)*ones(1,l_grid_g).*(crt1+cwt1) - ones(n_states,1)*grid_g +...
                 (lambda*ones(1,l_grid_g)).*qt1.*zt1.*bgt1);
-ratio_g = Euler_ratio(s_par,s_state,num_g,denom_g);
+ratio_g = Euler_ratio(s_par,s_state,num_g,denom_g,'g');
 euler_g = abs(ratio_g - p);
 
-denom_r = ((1+rt).^((sigma-1)/sigma)).*(Qrt + brt_1/lambdat - p*grid_r');
-num_r = ((zt1.^(-1/sigma)).*((1+rt1).^((sigma-1)/sigma))).*...
+denom_r = ((1+rt).^((sigma.r-1)/sigma.r)).*(Qrt + brt_1/lambdat - p*grid_r');
+num_r = ((zt1.^(-1/sigma.r)).*((1+rt1).^((sigma.r-1)/sigma.r))).*...
         ((lambda.*Qr)*ones(1,l_grid_g) + ones(n_states,1)*grid_r - (lambda*ones(1,l_grid_g)).*qt1.*zt1.*brt1);
-ratio_r = Euler_ratio(s_par,s_state,num_r,denom_r);
+ratio_r = Euler_ratio(s_par,s_state,num_r,denom_r,'r');
 euler_r = abs(p - ratio_r);
 
 
-denom_f = ((1+rt).^((sigma-1)/sigma)).*(Qft + bft_1/lambdat - p*grid_f');
-num_f = ((zt1.^(-1/sigma)).*((1+rt1).^((sigma-1)/sigma))).*...
+denom_f = ((1+rt).^((sigma.f-1)/sigma.f)).*(Qft + bft_1/lambdat - p*grid_f');
+num_f = ((zt1.^(-1/sigma.f)).*((1+rt1).^((sigma.f-1)/sigma.f))).*...
         ((lambda.*Qf)*ones(1,l_grid_g) + ones(n_states,1)*grid_f - (lambda*ones(1,l_grid_g)).*qt1.*zt1.*bft1);
-ratio_f = Euler_ratio(s_par,s_state,num_f,denom_f);
+ratio_f = Euler_ratio(s_par,s_state,num_f,denom_f,'f');
 euler_f = abs(p - ratio_f);
 
 

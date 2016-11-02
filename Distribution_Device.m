@@ -75,7 +75,7 @@ s_par = struct('epsilon',epsilon,'beta',beta,'Qr',Qr,'Qf',Qf,'sigma',...
 %Public Bonds
 min_b = 0;                                          %Minimum value for bonds
 max_b = .8;                                         %Maximum value for bonds
-grid_b_d_l = 30;                                    %Quantity of points on the grid for the investors
+grid_b_d_l = 21;                                    %Quantity of points on the grid for the investors
 width_b = (max_b-min_b)/(grid_b_d_l-1);             %Grid's width
 grid_b_r = min_b:width_b:max_b;                     %Grid for public bonds: RESIDENTS
 grid_b_f = grid_b_r + (1:grid_b_d_l)*1e-10;         %Grid for public bonds:  #### WHY???
