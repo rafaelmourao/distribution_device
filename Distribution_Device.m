@@ -34,7 +34,7 @@
 epsilon = 1e-3;                                     %Tolerance level
 
 %Consumers
-beta = .95;                                         %Intertemporal discount rate                                                                                       
+beta = .95;                                         %Intertemporal discount rate
 sigma.r = 2;                                        %Utility function parameter: risk aversion
 sigma.f = 2;
 
@@ -117,6 +117,10 @@ q = zeros(n_states,grid_b_d_l,grid_b_d_l);           %Price of Public Bond
 %% ITERATION
 
 %Creation of Functions to Iteration
+Vo1 = Vo;
+Vd1 = Vd;
+Vnd1 = Vnd;
+
 br1 = br;
 bf1 = bf;
 
@@ -137,6 +141,25 @@ z1 = z;
 dist = 100;                                         %Distance between previous and current price and bond functions
 t = 1;                                              %Number of interations
 
+% Calculation of default outcome
+r_d = zeros(n,1); % Variables in case of default
+w_d = zeros(n,1);
+cr_d = zeros(n,1);
+cf_d = zeros(n,1);
+g_d = zeros(n,1);
+Wd = zeros(n,1);
+for n = 1:n_states
+    r_d(n) = ...
+        alpha*(e.f(n).^(rho-1)).*(alpha*(e.f(n).^rho) + (1-alpha)).^(1/rho-1);
+    w_d(n,id_br,id_bf) = ...
+        (1-alpha)*((alpha*(e.f(n))^(rho)) + (1-alpha))^(1/rho-1);
+    cr_d(n) = (1/(1+tc))*w_d(n);                     
+    cf_d(n) = (1/(1+tc))*(1+r_d(n))*e.f(n);           
+    g_d(n) = tc*(cr_d(n) + cr_f(n));
+    Wd(n) =  Utility_Function(cr_d,sigma.r) +  Utility_Function(cr_f,sigma.f) ...
+        +  Utility_Function(g_d(n),sigma.g);
+end
+
 while dist > epsilon && t <= 200
     
     tic
@@ -145,6 +168,10 @@ while dist > epsilon && t <= 200
     %Observation: For the first iteration, the number of bonds owned by
     %each agent is ZERO, because it is considered the last period and would
     %be no future period in which the bonds would be paid.
+    Vo0 = Vo1;
+    Vd0 = Vd1;
+    Vnd0 = Vnd1;
+    
     kr0 = kr1;
     kf0 = kf1;
     
@@ -203,7 +230,10 @@ while dist > epsilon && t <= 200
                     
                 end
                 
-                [p, br_s, bf_s, bg_s] = Solution(s_par,s_grid,s_state,s_gov,s_investors);
+                [p, br_s, bf_s, bg_s] = ...
+                    Solution(s_par,s_grid,s_state,s_gov,s_investors);
+                id_br_s = find(grid_b_r == br_s);
+                id_br_r = find(grid_b_f == br_f);
                 
                 %**********%
                 
@@ -227,13 +257,25 @@ while dist > epsilon && t <= 200
                 
                 g1(n,id_br,id_bf) = tc*(cr1(n,id_br,id_bf) + cf1(n,id_br,id_bf));
                 
+                Wnd = Utility_Function(cr1(n,id_br,id_bf),sigma.r) + ...
+                    Utility_Function(cf1(n,id_br,id_bf),sigma.f) + ...
+                    Utility_Function(g1(n,id_br,id_bf),sigma.g);
+                
+                Vnd1(n,id_br,id_bf) = Wnd + beta*(probt * Vo0(:,id_br_s,id_br_f));
+                
+                    z1(n,id_br,id_bf) = 1
+                else
+                    z1(n,id_br,id_bf) = 1
+                    Vo1(n,id_br,id_bf) = Vd0(n)
+                end
+                
             end
             
         end
         
     end
     
-    t = t + 1;
+    Vd1 = Wd + prob * ( phi * Vo1(:,1,1) + (1-phi) * Vd0 );
     
     dist = sum(q1(:) - q0(:))^2
     
