@@ -127,7 +127,7 @@ r1 = r + alpha*((kr1+kf1).^(rho-1)).*(alpha*((kr1+kf1).^rho) + (1-alpha)).^(1/rh
 w1 = w + (1-alpha)*(alpha*((kr1+kf1).^rho) + (1-alpha)).^(1/rho-1);
 q1 = q;
 
-cr1 = cr + (1-tc)*((1+r1).*kr1 + w1);
+cr1 = cr + (1/(1+tc))*((1+r1).*kr1 + w1);
 cf1 = cf + (1+r1).*kf1;
 
 bg1 = bg;
@@ -214,7 +214,7 @@ while dist > epsilon && t <= 200
                 bg1(n,id_br,id_bf) = bg_s;                          %GOVERNEMNT supply of Bonds
                 
                 kr1(n,id_br,id_bf) = brt_1;                         %RESIDENTS capital supply
-                kf1(n,id_br,id_bf) = Qft + bft_1;                   %FOREIGNERS capital supply
+                kf1(n,id_br,id_bf) = e.f(n) + bft_1;                   %FOREIGNERS capital supply
                 
                 r1(n,id_br,id_bf) = ...
                     alpha*((kr1(n,id_br,id_bf)+kf1(n,id_br,id_bf))^(rho-1))*...
@@ -224,6 +224,8 @@ while dist > epsilon && t <= 200
                 
                 cr1(n,id_br,id_bf) = (1/(1+tc))*((1+r1(n,id_br,id_bf))*kr1(n,id_br,id_bf) + w1(n,id_br,id_bf)); %RESIDENT consumption
                 cf1(n,id_br,id_bf) = (1/(1+tc))*(1+r1(n,id_br,id_bf))*kf1(n,id_br,id_bf);                       %FOREIGN investors' consumption
+                
+                g1(n,id_br,id_bf) = tc*(cr1(n,id_br,id_bf) + cf1(n,id_br,id_bf));
                 
             end
             
