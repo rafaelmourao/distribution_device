@@ -9,8 +9,6 @@
 %NO PRODUCTIVITY SHOCKS ONTO THE FIRM
 
 %CONSTANT TAX RATE
-%THE WEALTH SHOCKS ARE MODELLED THE SAME WAY AS IN
-%MANKIW(1986)
 
 %SYMMETRIC TRANSITION MATRIX AMONG STATES OF NATURE
 %REGARDING SHOCKS
@@ -36,39 +34,30 @@
 epsilon = 1e-3;                                     %Tolerance level
 
 %Consumers
-beta = .95;                                         %Intertemporal discount rate
-gamma = .15;                                        %Degree of wealth heterogeneity
-Qr = [1;1+gamma;1-gamma];                        %(Fraction of)Wealth vector for the RESIDENT consumer
-Qf = [1;1-gamma;1+gamma];                        %(Fraction of)Wealth vector for the FOREIGN consumer                                                                                        
-sigma.r = 2;                                     %Utility function parameter: risk aversion
+beta = .95;                                         %Intertemporal discount rate                                                                                       
+sigma.r = 2;                                        %Utility function parameter: risk aversion
 sigma.f = 2;
-
-%Firm
-alpha = .3;                                         %Participation of capital on production (Sosa)
 
 %Government
 sigma.g = 2;                                        %Utility function parameter: risk aversion
 phi = .282;                                         %Probability of redemption (Arellano)
-theta = .2;                                         %Government preference parameter: foreigners relative to residents
+lambda = 1;                                          %Government preference parameter: foreigners relative to residents
 tc = .3;                                            %Tax rate over CONSUMPTION
 
-%Work Sector
-eta = .4;                                          %Proportion of labor sector on total initial wealth
+%Firm
+alpha = .3;                                         %Participation of capital on productio
+rho = -1;                                           %Elasticity of Substitution between capital and labor is 1/2 (=1/(1-rho))
 
-%Wealth evolution
-lambda = [1.2;.8;.8];
+%Foreigner wealth evolution
+e.f = [.5;1;1.5];
 
 %Transition Matrix
-psi = .8;                                           %Parameter of the transition matrix
-psi2 = .5;                                          %Parameter for the probability of a bigger wealth in case of a bad shock
-w_matrix = [psi 1-psi;1-psi psi];                   %Transition matrix for wealth growth rate
-prob = [1 0;0 1;0 1]*w_matrix*[1 0 0;0 1 1];        %Construction od the Probability matrix
-prob(:,2) = prob(:,2)*psi2;
-prob(:,3) = prob(:,3)*(1-psi2);
+prob = [.3 .6 .1;.2 .6 .2;.2 .5 .3];                %Construction od the Probability matrix
 n_states = size(prob,1);                            %Numbers of States of Nature
 
-s_par = struct('epsilon',epsilon,'beta',beta,'Qr',Qr,'Qf',Qf,'sigma',...
-    sigma,'lambda',lambda,'n_states',n_states,'prob',prob,'tc',tc);
+s_par = struct('epsilon',epsilon,'beta',beta,'sigma.r',sigma.r,'sigma.f',sigma.f,...
+    'sigma.g',sigma.g,'phi',phi,'lambda',lambda,'tc',tc,'alpha',alpha,'rho',rho,...
+    'e.f',e.f,'prob',prob,'n_states',n_states);
 
 %% GRID
 
@@ -109,7 +98,6 @@ kf = zeros(n_states,grid_b_d_l,grid_b_d_l);          %CAPITAL policy funtion for
 
 cr = zeros(n_states,grid_b_d_l,grid_b_d_l);          %CONSUMPTION policy funtion for RESIDENTS
 cf = zeros(n_states,grid_b_d_l,grid_b_d_l);          %CONSUMPTION policy funtion for FOREIGNERS
-cw = zeros(n_states,grid_b_d_l,grid_b_d_l);          %CONSUMPTION policy funtion for WORKERS
 kr = zeros(n_states,grid_b_d_l,grid_b_d_l);          %CAPITAL policy funtion for RESIDENTS
 
 br = zeros(n_states,grid_b_d_l,grid_b_d_l);          %BONDS policy funtion for RESIDENTS
@@ -132,16 +120,15 @@ q = zeros(n_states,grid_b_d_l,grid_b_d_l);           %Price of Public Bond
 br1 = br;
 bf1 = bf;
 
-kr1 = repmat(Qr,[1 grid_b_d_l grid_b_d_l]);
-kf1 = repmat(Qf,[1 grid_b_d_l grid_b_d_l]);
+kr1 = repmat([0;0;0],[1 grid_b_d_l grid_b_d_l]);    %Residents don't have any resources to lend in the very beginning
+kf1 = repmat(e.f,[1 grid_b_d_l grid_b_d_l]);        %Foreigners only have their endowments to lend in the very beginning
 
-r1 = r + alpha*((kr1+kf1)/eta).^(alpha-1);
-w1 = w + (1-alpha)*((kr1+kf1)/eta).^alpha;
+r1 = r + alpha*((kr1+kf1).^(rho-1)).*(alpha*((kr1+kf1).^rho) + (1-alpha)).^(1/rho-1);
+w1 = w + (1-alpha)*(alpha*((kr1+kf1).^rho) + (1-alpha)).^(1/rho-1);
 q1 = q;
 
-cr1 = cr + (1-tc)*(1+r1).*kr1;
+cr1 = cr + (1-tc)*((1+r1).*kr1 + w1);
 cf1 = cf + (1+r1).*kf1;
-cw1 = cw + (1-tc)*eta.*w1;
 
 bg1 = bg;
 g1 = g + tc.*(cr1 + cw1);
@@ -163,7 +150,6 @@ while dist > epsilon && t <= 200
     
     cr0 = cr1;
     cf0 = cf1;
-    cw0 = cw1;
     
     br0 = br1;
     bf0 = bf1;
@@ -184,7 +170,6 @@ while dist > epsilon && t <= 200
     bft1 = future(bf0);     %FOREIGN's future bond supply
     bgt1 = future(bg0);     %GOVERNMENT's future bond supply
     crt1 = future(cr0);     %Future consumption for RESIDENT investor
-    cwt1 = future(cw0);     %Future consumption for RESIDENT worker
     
     s_investors = struct('r0',r0,'q0',q0,'z0',z0,'br0',br0,'bf0',bf0,'rt1',rt1,'qt1',qt1,'zt1',zt1,'brt1',brt1,'bft1',bft1);
     
@@ -197,9 +182,6 @@ while dist > epsilon && t <= 200
             for n = 1:n_states                          %State of Nature
                 
                 bgt_1 = brt_1 + bft_1;                  %Amount of bonds issued by the Government in the previous period
-                lambdat = lambda(n);                    %Wealth growth rate: states 2 and 3 have the same lambda
-                Qrt = Qr(n);                            %Share of total income in hands of RESIDENTS
-                Qft = Qf(n);                            %Share of total income in hands of FOREIGNERS
                 probt = prob(n,:);                      %Probability measure of next period's states of nature (Row Vector)
                 rt = r0(n,id_br,id_bf);                 %Current Interest Rate
                 
@@ -209,9 +191,8 @@ while dist > epsilon && t <= 200
                 
                 %Government
                 crt = cr0(n,id_br,id_bf);               %Current Consumption for RESIDENT investor
-                cwt = cw0(n,id_br,id_bf);               %Current Consumption for RESIDENT worker
                 
-                s_gov = struct('crt',crt,'cwt',cwt,'bgt1',bgt1,'bg0',bg0,'crt1',crt1,'cr0',cr0,'cwt1',cwt1,'cw0',cw0);
+                s_gov = struct('crt',crt,'bgt1',bgt1,'bg0',bg0,'crt1',crt1,'cr0',cr0,'cwt1',cwt1,'cw0',cw0);
                 
                 
                 %**********%
@@ -222,25 +203,27 @@ while dist > epsilon && t <= 200
                     
                 end
                 
-                [p br_s bf_s bg_s] = Solution(s_par,s_grid,s_state,s_gov,s_investors);
+                [p, br_s, bf_s, bg_s] = Solution(s_par,s_grid,s_state,s_gov,s_investors);
                 
                 %**********%
                 
-                q1(n,id_br,id_bf) = p;     %Equilibrium price for the Bonds' market
+                q1(n,id_br,id_bf) = p;                              %Equilibrium price for the Bonds' market
                 
-                br1(n,id_br,id_bf) = br_s;	%RESIDENTS demand for Bonds
-                bf1(n,id_br,id_bf) = bf_s;	%FOREIGNERS demand for Bonds
-                bg1(n,id_br,id_bf) = bg_s; 	%GOVERNEMNT supply of Bonds
+                br1(n,id_br,id_bf) = br_s;                          %RESIDENTS demand for Bonds
+                bf1(n,id_br,id_bf) = bf_s;                          %FOREIGNERS demand for Bonds
+                bg1(n,id_br,id_bf) = bg_s;                          %GOVERNEMNT supply of Bonds
                 
-                kr1(n,id_br,id_bf) = Qrt + brt_1/lambdat - p*br_s;      %RESIDENTS capital supply
-                kf1(n,id_br,id_bf) = Qft + bft_1/lambdat - p*bf_s;       %FOREIGNERS capital supply
+                kr1(n,id_br,id_bf) = brt_1;                         %RESIDENTS capital supply
+                kf1(n,id_br,id_bf) = Qft + bft_1;                   %FOREIGNERS capital supply
                 
-                r1(n,id_br,id_bf) = alpha*((kr1(n,id_br,id_bf)+kf1(n,id_br,id_bf))/eta)^(alpha-1);  %Interest rate
-                w1(n,id_br,id_bf) = (1-alpha)*((kr1(n,id_br,id_bf)+kf1(n,id_br,id_bf))/eta)^alpha;  %Wage
+                r1(n,id_br,id_bf) = ...
+                    alpha*((kr1(n,id_br,id_bf)+kf1(n,id_br,id_bf))^(rho-1))*...
+                    (alpha*((kr1(n,id_br,id_bf)+kf1(n,id_br,id_bf))^(rho)) + (1-alpha))^(1/rho-1);              %Interest rate
+                w1(n,id_br,id_bf) = ...
+                    (1-alpha)*(alpha*((kr1(n,id_br,id_bf)+kf1(n,id_br,id_bf))^(rho)) + (1-alpha))^(1/rho-1);    %Wage
                 
-                cr1(n,id_br,id_bf) = (1-tc)*(1+r1(n,id_br,id_bf))*kr1(n,id_br,id_bf);                  %RESIDENT investors' consumption
-                cw1(n,id_br,id_bf) = (1-tc)*w1(n,id_br,id_bf)*eta;                              %RESIDENT workers' consumption
-                cf1(n,id_br,id_bf) = (1+r1(n,id_br,id_bf))*kf1(n,id_br,id_bf);                  %FOREIGN investors' consumption
+                cr1(n,id_br,id_bf) = (1/(1+tc))*((1+r1(n,id_br,id_bf))*kr1(n,id_br,id_bf) + w1(n,id_br,id_bf)); %RESIDENT consumption
+                cf1(n,id_br,id_bf) = (1/(1+tc))*(1+r1(n,id_br,id_bf))*kf1(n,id_br,id_bf);                       %FOREIGN investors' consumption
                 
             end
             
