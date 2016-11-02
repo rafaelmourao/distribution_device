@@ -10,7 +10,6 @@ br = [br_int;br_cor];
 bf = [bf_int;bf_cor];
 bg = [bg_int;bg_cor];
 
-status
 [~, i] = find(status == 1,1);
 
 p = price(i);

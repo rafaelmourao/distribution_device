@@ -21,7 +21,6 @@ p_max = 4;
 
 %p = grid_p(i);
 [p sum_euler] = fminbnd(Obj_func,0,p_max);
-sum_euler
 %if p > 2.5
     
 %    grid_p = 0:.01:p_max;
