@@ -22,6 +22,8 @@ brt_1 = s_state.brt_1;
 bft_1 = s_state.bft_1;
 bgt_1 = s_state.bgt_1;
 rt = s_state.rt;
+wt = s_state.wt;
+zt = s_state.zt;
 eft = e.f(n);
 
 %Government
@@ -33,6 +35,7 @@ cft1 = s_gov.cft1;
 
 %Investors
 rt1 = s_investors.rt1;
+wt1 = s_investors.wt1;
 qt1 = s_investors.qt1;
 zt1 = s_investors.zt1;
 brt1 = s_investors.brt1;
@@ -45,22 +48,22 @@ bft1 = s_investors.bft1;
 %IT'S RAISED TO THE POWER OF A NEGATIVE NUMBER. YOU MUST
 %FIX THAT LATER
 
-denom_g = tc*(crt+cft) - zt.*(bgt_1 + p*grid_g');
-num_g = (zt1.^(-1/sigma.g)).*(tc*ones(n_states,l_grid_g).*(crt1+cwt1) - ones(n_states,1)*grid_g +...
-                ones(1,l_grid_g).*qt1.*zt1.*bgt1);
+denom_g = tc*(crt+cft) + zt.*(p*grid_g' - bgt_1);
+num_g = (zt1.^(-1/sigma.g)).*(tc*(crt1+cft1) + zt1.*qt1.*bgt1)...
+                - ones(n_states,1)*grid_g;
 ratio_g = Euler_ratio(s_par,s_state,num_g,denom_g,'g');
 euler_g = abs(ratio_g - p);
 
-denom_r = ((1+rt).^((sigma.r-1)/sigma.r)).*(brt_1 - p*grid_r');
-num_r = ((zt1.^(-1/sigma.r)).*((1+rt1).^((sigma.r-1)/sigma.r))).*...
-        ((lambda.*Qr)*ones(1,l_grid_g) + ones(n_states,1)*grid_r - (lambda*ones(1,l_grid_g)).*qt1.*zt1.*brt1);
+denom_r = ((1+rt)*zt*brt_1 + wt - zt*p*grid_r');
+num_r = ((zt1.^(-1/sigma.r)).*((1+rt1).^(-1/sigma.r))).*...
+        ((1+rt1)*zt1*ones(n_states,1)*grid_r + wt1 - zt1.*qt1.*brt1);
 ratio_r = Euler_ratio(s_par,s_state,num_r,denom_r,'r');
 euler_r = abs(p - ratio_r);
 
 
-denom_f = ((1+rt).^((sigma.f-1)/sigma.f)).*(Qft + bft_1/lambdat - p*grid_f');
-num_f = ((zt1.^(-1/sigma.f)).*((1+rt1).^((sigma.f-1)/sigma.f))).*...
-        ((lambda.*Qf)*ones(1,l_grid_g) + ones(n_states,1)*grid_f - (lambda*ones(1,l_grid_g)).*qt1.*zt1.*bft1);
+denom_f = ((1+rt)*(eft + zt*bft_1) - zt*p*grid_f');
+num_f = ((zt1.^(-1/sigma.f)).*((1+rt1).^(-1/sigma.f))).*...
+        ((1+rt1)*(e.f*ones(1,l_grid_g) + zt1*ones(n_states,1)*grid_f) - zt1.*qt1.*bft1);
 ratio_f = Euler_ratio(s_par,s_state,num_f,denom_f,'f');
 euler_f = abs(p - ratio_f);
 

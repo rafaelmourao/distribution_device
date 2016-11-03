@@ -1,4 +1,4 @@
-function [status p br bf B] = Corner_Solution(s_par,s_grid,s_state,s_gov,s_investors)
+function [status, p, br, bf, B] = Corner_Solution(s_par,s_grid,s_state,s_gov,s_investors)
 
 %Each output variable has '6' lines, each refering to one of the '6'
 %possible cases of corner solutions.
@@ -8,9 +8,6 @@ function [status p br bf B] = Corner_Solution(s_par,s_grid,s_state,s_gov,s_inves
 %Parameters
 epsilon = .1;
 sigma = s_par.sigma;
-lambda = s_par.lambda;
-Qr = s_par.Qr;
-Qf = s_par.Qf;
 tc = s_par.tc;
 
 %Grid
@@ -23,19 +20,20 @@ brt_1 = s_state.brt_1;
 bft_1 = s_state.bft_1;
 bgt_1 = s_state.bgt_1;
 rt = s_state.rt;
-lambdat = lambda(n);
-Qrt = Qr(n);
-Qft = Qf(n);
+wt = s_state.wt;
+zt = s_state.zt;
+eft = e.f(n);
 
 %Government
 crt = s_gov.crt;
-cwt = s_gov.cwt;
+cft = s_gov.cft;
 bgt1 = s_gov.bgt1;
 crt1 = s_gov.crt1;
-cwt1 = s_gov.cwt1;
+cft1 = s_gov.cft1;
 
 %Investors
 r0 = s_investors.r0;
+w0 = s_investors.w0;
 q0 = s_investors.q0;
 z0 = s_investors.z0;
 br0 = s_investors.br0;
@@ -58,6 +56,8 @@ bf_c1 = 1e-10;
 
 rt1_c1 = squeeze(r0(:,1,1));
 
+wt1_c1 = squeeze(w0(:,1,1));
+
 qt1_c1 = squeeze(q0(:,1,1));
 
 zt1_c1 = squeeze(z0(:,1,1));
@@ -66,7 +66,11 @@ brt1_c1 = squeeze(br0(:,1,1));
 
 bft1_c1 = squeeze(bf0(:,1,1));
 
-denom_r_c1 = ((1+rt).^((sigma.r-1)/sigma.r)).*(Qrt + brt_1/lambdat);
+denom_r = ((1+rt)*zt*brt_1 + wt - zt*p*grid_r');
+num_r = ((zt1.^(-1/sigma.r)).*((1+rt1).^(-1/sigma.r))).*...
+        ((1+rt1)*zt1*ones(n_states,1)*grid_r + wt1 - zt1.*qt1.*brt1);
+
+denom_r_c1 = ((1+rt)*zt*brt_1 + wt);
 
 num_r_c1 = ((zt1_c1.^(-1/sigma.r)).*((1+rt1_c1).^((sigma.r-1)/sigma.r))).*...
                 (lambda.*Qr - lambda.*qt1_c1.*zt1_c1.*brt1_c1);

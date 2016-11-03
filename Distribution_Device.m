@@ -156,7 +156,7 @@ for n = 1:n_states
     cr_d(n) = (1/(1+tc))*w_d(n);                     
     cf_d(n) = (1/(1+tc))*(1+r_d(n))*e.f(n);           
     g_d(n) = tc*(cr_d(n) + cr_f(n));
-    Wd(n) =  Utility_Function(cr_d,sigma.r) +  Utility_Function(cr_f,sigma.f) ...
+    Wd(n) =  Utility_Function(cr_d,sigma.r) +  Utility_Function(cf_d,sigma.f) ...
         +  Utility_Function(g_d(n),sigma.g);
 end
 
@@ -191,6 +191,7 @@ while dist > epsilon && t <= 200
     
     future = @(x) [x(1,g_func_aux);x(2,g_func_aux);x(3,g_func_aux)];
     rt1 = future(r0);         %Future interest rate
+    wt1 = future(w0);         %Future interest rate
     qt1 = future(q0);         %Future bond price
     zt1 = future(z0);         %Future Default
     brt1 = future(br0);     %RESIDENT's future bond supply
@@ -198,7 +199,7 @@ while dist > epsilon && t <= 200
     bgt1 = future(bg0);     %GOVERNMENT's future bond supply
     crt1 = future(cr0);     %Future consumption for RESIDENT investor
     
-    s_investors = struct('r0',r0,'q0',q0,'z0',z0,'br0',br0,'bf0',bf0,'rt1',rt1,'qt1',qt1,'zt1',zt1,'brt1',brt1,'bft1',bft1);
+    s_investors = struct('r0',r0,'w0',w0,'q0',q0,'z0',z0,'br0',br0,'bf0',bf0,'rt1',rt1,'wt1',wt1,'qt1',qt1,'zt1',zt1,'brt1',brt1,'bft1',bft1);
     
     parfor id_br = 1:grid_b_d_l                               %RESIDENTS bonds from previous period
         brt_1 = grid_b_r(id_br);
@@ -211,8 +212,10 @@ while dist > epsilon && t <= 200
                 bgt_1 = brt_1 + bft_1;                  %Amount of bonds issued by the Government in the previous period
                 probt = prob(n,:);                      %Probability measure of next period's states of nature (Row Vector)
                 rt = r0(n,id_br,id_bf);                 %Current Interest Rate
+                wt = w0(n,id_br,id_bf);                 %Current Interest Rate
+                zt = z0(n,id_br,id_bf);                 %Current Default Decision
                 
-                s_state = struct('rt',rt,'n',n,'brt_1',brt_1,'bft_1',bft_1,'bgt_1',bgt_1);
+                s_state = struct('rt',rt,'wt',wt,'zt',zt,'n',n,'brt_1',brt_1,'bft_1',bft_1,'bgt_1',bgt_1);
                 
                 %Variables that agents will use as known values when making their decisions
                 
@@ -220,7 +223,7 @@ while dist > epsilon && t <= 200
                 crt = cr0(n,id_br,id_bf);               %Current Consumption for RESIDENT investor
                 cft = cf0(n,id_br,id_bf);               %Current Consumption for FOREIGN investor
                 
-                s_gov = struct('crt',crt,'cft',cft,'bgt1',bgt1,'bg0',bg0,'crt1',crt1,'cft1',cft1,'cr0',cr0,'cf0',cf0);
+                s_gov = struct('crt',crt,'cft',cft,'bgt1',bgt1,'bg0',bg0,'crt1',crt1,'cft1',cft1);
                 
                 
                 %**********%
@@ -245,7 +248,7 @@ while dist > epsilon && t <= 200
                 bg1(n,id_br,id_bf) = bg_s;                          %GOVERNEMNT supply of Bonds
                 
                 kr1(n,id_br,id_bf) = brt_1;                         %RESIDENTS capital supply
-                kf1(n,id_br,id_bf) = e.f(n) + bft_1;                   %FOREIGNERS capital supply
+                kf1(n,id_br,id_bf) = e.f(n) + bft_1;                %FOREIGNERS capital supply
                 
                 r1(n,id_br,id_bf) = ...
                     alpha*((kr1(n,id_br,id_bf)+kf1(n,id_br,id_bf))^(rho-1))*...
@@ -253,10 +256,12 @@ while dist > epsilon && t <= 200
                 w1(n,id_br,id_bf) = ...
                     (1-alpha)*(alpha*((kr1(n,id_br,id_bf)+kf1(n,id_br,id_bf))^(rho)) + (1-alpha))^(1/rho-1);    %Wage
                 
-                cr1(n,id_br,id_bf) = (1/(1+tc))*((1+r1(n,id_br,id_bf))*kr1(n,id_br,id_bf) + w1(n,id_br,id_bf)); %RESIDENT consumption
-                cf1(n,id_br,id_bf) = (1/(1+tc))*(1+r1(n,id_br,id_bf))*kf1(n,id_br,id_bf);                       %FOREIGN investors' consumption
+                cr1(n,id_br,id_bf) = (1/(1+tc))*((1+r1(n,id_br,id_bf))*kr1(n,id_br,id_bf)...
+                    + w1(n,id_br,id_bf) - p*br_s);                                                              %RESIDENT consumption
+                cf1(n,id_br,id_bf) = (1/(1+tc))*((1+r1(n,id_br,id_bf))*kf1(n,id_br,id_bf)...
+                    - p*bf_s);                                                                                  %FOREIGN investors' consumption
                 
-                g1(n,id_br,id_bf) = tc*(cr1(n,id_br,id_bf) + cf1(n,id_br,id_bf));
+                g1(n,id_br,id_bf) = tc*(cr1(n,id_br,id_bf) + cf1(n,id_br,id_bf)) + p*bg_s - bgt_1;
                 
                 Wnd = Utility_Function(cr1(n,id_br,id_bf),sigma.r) + ...
                     Utility_Function(cf1(n,id_br,id_bf),sigma.f) + ...
