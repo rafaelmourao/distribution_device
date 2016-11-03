@@ -1,11 +1,9 @@
-function [varargout] = Euler_sum_int(p,s_par,s_grid,s_state,s_gov,s_investors)
+function [fval, Bt, brt, bft ] = Euler_sum_int(p,s_par,s_grid,s_state,s_gov,s_investors)
 
 %% VARIABLES NEEDED
 
 %Parameters
-sigma.r = s_par.sigma.r;
-sigma.f = s_par.sigma.f;
-sigma.g = s_par.sigma.g;
+sigma = s_par.sigma;
 e.f = s_par.e.f;
 tc = s_par.tc;
 n_states = s_par.n_states;
@@ -60,32 +58,21 @@ euler_g = abs(ratio_g - p);
 
 denom_r = ((1+rt)*brt_1 + wt - p*grid_r');
 num_r = ((1+rt1).^(-1/sigma.r)).*...
-        ((1+rt1)*zt1*ones(n_states,1)*grid_r + wt1 - zt1.*qt1.*brt1);
+        ((1+rt1).*zt1.*repmat(grid_r,n_states,1) + wt1 - zt1.*qt1.*brt1);
 ratio_r = Euler_ratio(s_par,s_state,zt1,num_r,denom_r,'r');
 euler_r = abs(p - ratio_r);
 
 
 denom_f = ((1+rt)*(eft + bft_1) - p*grid_f');
 num_f = ((1+rt1).^(-1/sigma.f)).*...
-        ((1+rt1)*(e.f*ones(1,l_grid_g) + zt1*ones(n_states,1)*grid_f) - zt1.*qt1.*bft1);
+        ((1+rt1).*(repmat(e.f,1,l_grid_g) + zt1.*repmat(grid_f,n_states,1)) - zt1.*qt1.*bft1);
 ratio_f = Euler_ratio(s_par,s_state,zt1,num_f,denom_f,'f');
 euler_f = abs(p - ratio_f);
 
 
-[varargout{1} , b_star] = min(euler_g + euler_r + euler_f);
-
+[fval , b_star] = min(euler_g + euler_r + euler_f);
 Bt = grid_g(b_star);
-
 brt = grid_r(b_star);
-
 bft = grid_f(b_star);
 
-if nargout == 3
-    
-    varargout{1} = Bt;
-    varargout{2} = brt;
-    varargout{3} = bft;
-    
-    return
-    
 end

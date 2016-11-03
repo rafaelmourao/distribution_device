@@ -55,64 +55,55 @@ e.f = [.5;1;1.5];
 prob = [.3 .6 .1;.2 .6 .2;.2 .5 .3];                %Construction od the Probability matrix
 n_states = size(prob,1);                            %Numbers of States of Nature
 
-s_par = struct('epsilon',epsilon,'beta',beta,'sigma.r',sigma.r,'sigma.f',sigma.f,...
-    'sigma.g',sigma.g,'phi',phi,'lambda',lambda,'tc',tc,'alpha',alpha,'rho',rho,...
-    'e.f',e.f,'prob',prob,'n_states',n_states);
+s_par = struct('epsilon',epsilon,'beta',beta,'sigma',sigma,...
+    'phi',phi,'lambda',lambda,'tc',tc,'alpha',alpha,'rho',rho,...
+    'e',e,'prob',prob,'n_states',n_states);
 
 %% GRID
 
 %Public Bonds
 min_b = 0;                                          %Minimum value for bonds
 max_b = .8;                                         %Maximum value for bonds
-grid_b_d_l = 21;                                    %Quantity of points on the grid for the investors
-width_b = (max_b-min_b)/(grid_b_d_l-1);             %Grid's width
-grid_b_r = min_b:width_b:max_b;                     %Grid for public bonds: RESIDENTS
-grid_b_f = grid_b_r + (1:grid_b_d_l)*1e-10;         %Grid for public bonds:  #### WHY???
-[X, Y] = meshgrid(grid_b_r,grid_b_f);
-b_g_finder = X+Y;                                   %This is an auxiliary object used to identify a value from the GOVERNMENT's grid into it's policy function
-grid_b_g = unique(b_g_finder)';                     %Grid for public bonds: GOVERNMENT
-grid_b_g_l = length(grid_b_g);                      %Number of points on the government grid
-r_func_aux = zeros(1,grid_b_g_l);                   %This vector is used to evaluate the functions for the Resident's Euler Equation
-f_func_aux = zeros(1,grid_b_g_l);                   %This vector is used to evaluate the functions for the Foregin's Euler Equation
-g_func_aux = zeros(1,grid_b_g_l);                   %This vector is used to evaluate the functions for the Government's Euler Equation
-for i = 1:grid_b_g_l
-    g_func_aux(i) = find(b_g_finder == grid_b_g(i));
-    [f_func_aux(i) r_func_aux(i)] = find(b_g_finder == grid_b_g(i));
-end
-grid_r_aux = grid_b_r(r_func_aux);
-grid_f_aux = grid_b_f(f_func_aux);
+n_bonds = 21;                                       %Quantity of points on the grid for the investors
 
-s_grid = struct('grid_b_r',grid_b_r,'grid_b_f',grid_b_f,'grid_b_g',grid_b_g,'g_func_aux',g_func_aux,'grid_r_aux',grid_r_aux,'grid_f_aux',grid_f_aux,...
-    'b_g_finder',b_g_finder);
+grid_b_r = linspace(min_b,max_b,n_bonds);            %Grid for resident bonds:
+grid_b_f = grid_b_r;                                 %Grid for foreigner bonds;
+grid_r_aux = repmat(grid_b_r,1,n_bonds);             %Combinations of bonds
+grid_f_aux = kron(grid_b_f,ones(1,n_bonds));
+grid_b_g = grid_r_aux + grid_f_aux;
+n_bonds_g = length(grid_b_g);                       %Number of combination of bonds
+
+s_grid = struct('grid_b_r',grid_b_r,'grid_b_f',grid_b_f,...
+    'grid_b_g',grid_b_g,'grid_r_aux',grid_r_aux,'grid_f_aux',grid_f_aux);
 
 %% VALUE FUNCTIONS FOR THE GOVERNMENT
 
 Vd = zeros(n_states,1);                             %Value function in case of DEFAULT
-Vnd = zeros(n_states,grid_b_d_l,grid_b_d_l);        %Value function in case of NO DEFAULT
-Vo = zeros(n_states,grid_b_d_l,grid_b_d_l);         %Value function for the OPTION of DEFAULT
+Vnd = zeros(n_states,n_bonds,n_bonds);        %Value function in case of NO DEFAULT
+Vo = zeros(n_states,n_bonds,n_bonds);         %Value function for the OPTION of DEFAULT
 
 %% POLICY FUNCTIONS
 
 %Consumers
-kf = zeros(n_states,grid_b_d_l,grid_b_d_l);          %CAPITAL policy funtion for FOREIGNERS
+kf = zeros(n_states,n_bonds,n_bonds);          %CAPITAL policy funtion for FOREIGNERS
 
-cr = zeros(n_states,grid_b_d_l,grid_b_d_l);          %CONSUMPTION policy funtion for RESIDENTS
-cf = zeros(n_states,grid_b_d_l,grid_b_d_l);          %CONSUMPTION policy funtion for FOREIGNERS
-kr = zeros(n_states,grid_b_d_l,grid_b_d_l);          %CAPITAL policy funtion for RESIDENTS
+cr = zeros(n_states,n_bonds,n_bonds);          %CONSUMPTION policy funtion for RESIDENTS
+cf = zeros(n_states,n_bonds,n_bonds);          %CONSUMPTION policy funtion for FOREIGNERS
+kr = zeros(n_states,n_bonds,n_bonds);          %CAPITAL policy funtion for RESIDENTS
 
-br = zeros(n_states,grid_b_d_l,grid_b_d_l);          %BONDS policy funtion for RESIDENTS
-bf = zeros(n_states,grid_b_d_l,grid_b_d_l);          %BONDS policy funtion for FOREIGNERS
+br = zeros(n_states,n_bonds,n_bonds);          %BONDS policy funtion for RESIDENTS
+bf = zeros(n_states,n_bonds,n_bonds);          %BONDS policy funtion for FOREIGNERS
 
 %Government
-bg = 1e-10*ones(n_states,grid_b_d_l,grid_b_d_l);     %BONDS policy funtion for the GOVERNMENT
-g = zeros(n_states,grid_b_d_l,grid_b_d_l);           %PUBLIC EXPENDITURE policy funtion for the GOVERNMENT
-z = ones(n_states,grid_b_d_l,grid_b_d_l);            %DEFAULT policy funtion for the GOVERNMENT
+bg = 1e-10*ones(n_states,n_bonds,n_bonds);     %BONDS policy funtion for the GOVERNMENT
+g = zeros(n_states,n_bonds,n_bonds);           %PUBLIC EXPENDITURE policy funtion for the GOVERNMENT
+z = ones(n_states,n_bonds,n_bonds);            %DEFAULT policy funtion for the GOVERNMENT
 
 %% PRICE FUNCTIONS
 
-r = zeros(n_states,grid_b_d_l,grid_b_d_l);           %Interest Rate
-w = zeros(n_states,grid_b_d_l,grid_b_d_l);           %Wage
-q = zeros(n_states,grid_b_d_l,grid_b_d_l);           %Price of Public Bond
+r = zeros(n_states,n_bonds,n_bonds);           %Interest Rate
+w = zeros(n_states,n_bonds,n_bonds);           %Wage
+q = zeros(n_states,n_bonds,n_bonds);           %Price of Public Bond
 
 %% ITERATION
 
@@ -124,8 +115,8 @@ Vnd1 = Vnd;
 br1 = br;
 bf1 = bf;
 
-kr1 = repmat([0;0;0],[1 grid_b_d_l grid_b_d_l]);    %Residents don't have any resources to lend in the very beginning
-kf1 = repmat(e.f,[1 grid_b_d_l grid_b_d_l]);        %Foreigners only have their endowments to lend in the very beginning
+kr1 = repmat([0;0;0],[1 n_bonds n_bonds]);    %Residents don't have any resources to lend in the very beginning
+kf1 = repmat(e.f,[1 n_bonds n_bonds]);        %Foreigners only have their endowments to lend in the very beginning
 
 r1 = r + alpha*((kr1+kf1).^(rho-1)).*(alpha*((kr1+kf1).^rho) + (1-alpha)).^(1/rho-1);
 w1 = w + (1-alpha)*(alpha*((kr1+kf1).^rho) + (1-alpha)).^(1/rho-1);
@@ -138,28 +129,27 @@ bg1 = bg;
 g1 = g + tc.*(cr1 + cf1);
 z1 = z;
 
-dist = 100;                                         %Distance between previous and current price and bond functions
-t = 1;                                              %Number of interations
-
 % Calculation of default outcome
-r_d = zeros(n,1); % Variables in case of default
-w_d = zeros(n,1);
-cr_d = zeros(n,1);
-cf_d = zeros(n,1);
-g_d = zeros(n,1);
-Wd = zeros(n,1);
+r_d = zeros(n_states,1); % Variables in case of default
+w_d = zeros(n_states,1);
+cr_d = zeros(n_states,1);
+cf_d = zeros(n_states,1);
+g_d = zeros(n_states,1);
+Wd = zeros(n_states,1);
 for n = 1:n_states
     r_d(n) = ...
         alpha*(e.f(n).^(rho-1)).*(alpha*(e.f(n).^rho) + (1-alpha)).^(1/rho-1);
-    w_d(n,id_br,id_bf) = ...
+    w_d(n) = ...
         (1-alpha)*((alpha*(e.f(n))^(rho)) + (1-alpha))^(1/rho-1);
     cr_d(n) = (1/(1+tc))*w_d(n);                     
     cf_d(n) = (1/(1+tc))*(1+r_d(n))*e.f(n);           
-    g_d(n) = tc*(cr_d(n) + cr_f(n));
-    Wd(n) =  Utility_Function(cr_d,sigma.r) +  Utility_Function(cf_d,sigma.f) ...
+    g_d(n) = tc*(cr_d(n) + cf_d(n));
+    Wd(n) =  Utility_Function(cr_d(n),sigma.r) +  Utility_Function(cf_d(n),sigma.f) ...
         +  Utility_Function(g_d(n),sigma.g);
 end
 
+dist = 100;                                         %Distance between previous and current price and bond functions
+t = 1;                                              %Number of interations
 while dist > epsilon && t <= 200
     
     tic
@@ -189,22 +179,23 @@ while dist > epsilon && t <= 200
     w0 = w1;
     q0 = q1;
     
-    future = @(x) [x(1,g_func_aux);x(2,g_func_aux);x(3,g_func_aux)];
-    rt1 = future(r0);         %Future interest rate
-    wt1 = future(w0);         %Future interest rate
-    qt1 = future(q0);         %Future bond price
-    zt1 = future(z0);         %Future Default
-    brt1 = future(br0);     %RESIDENT's future bond supply
-    bft1 = future(bf0);     %FOREIGN's future bond supply
-    bgt1 = future(bg0);     %GOVERNMENT's future bond supply
-    crt1 = future(cr0);     %Future consumption for RESIDENT investor
+    rt1 = r0(:,:);         %Future interest rate 
+    wt1 = w0(:,:);         %Future interest rate
+    qt1 = q0(:,:);         %Future bond price
+    zt1 = z0(:,:);         %Future Default
+    brt1 = br0(:,:);     %Resident's future bond supply
+    bft1 = bf0(:,:);     %Resident's future bond supply
+    bgt1 = bg0(:,:);     %Resident's future bond supply
+    crt1 = cr0(:,:);     %Future consumption for RESIDENT investor
+    cft1 = cf0(:,:);     %Future consumption for RESIDENT investor
     
-    s_investors = struct('r0',r0,'w0',w0,'q0',q0,'z0',z0,'br0',br0,'bf0',bf0,'rt1',rt1,'wt1',wt1,'qt1',qt1,'zt1',zt1,'brt1',brt1,'bft1',bft1);
+    s_investors = struct('r0',r0,'w0',w0,'q0',q0,'z0',z0,'br0',br0,'bf0',bf0,...
+        'rt1',rt1,'wt1',wt1,'qt1',qt1,'zt1',zt1,'brt1',brt1,'bft1',bft1);
     
-    parfor id_br = 1:grid_b_d_l                               %RESIDENTS bonds from previous period
+    for id_br = 1:n_bonds                               %RESIDENTS bonds from previous period
         brt_1 = grid_b_r(id_br);
         
-        for id_bf = 1:grid_b_d_l                      %FOREIGNERS bonds from previous period
+        for id_bf = 1:n_bonds                      %FOREIGNERS bonds from previous period
             bft_1 = grid_b_f(id_bf);
             
             for n = 1:n_states                          %State of Nature
@@ -223,7 +214,8 @@ while dist > epsilon && t <= 200
                 crt = cr0(n,id_br,id_bf);               %Current Consumption for RESIDENT investor
                 cft = cf0(n,id_br,id_bf);               %Current Consumption for FOREIGN investor
                 
-                s_gov = struct('crt',crt,'cft',cft,'bgt1',bgt1,'bg0',bg0,'crt1',crt1,'cft1',cft1);
+                s_gov = struct('crt',crt,'cft',cft,'bgt1',bgt1,'bg0',bg0,...
+                    'cr0', cr0, 'cf0', cf0, 'crt1',crt1,'cft1',cft1);
                 
                 
                 %**********%
@@ -237,7 +229,7 @@ while dist > epsilon && t <= 200
                 [p, br_s, bf_s, bg_s] = ...
                     Solution(s_par,s_grid,s_state,s_gov,s_investors);
                 id_br_s = find(grid_b_r == br_s);
-                id_br_r = find(grid_b_f == br_f);
+                id_bf_s = find(grid_b_f == bf_s);
                 
                 %**********%
                 
@@ -267,14 +259,14 @@ while dist > epsilon && t <= 200
                     Utility_Function(cf1(n,id_br,id_bf),sigma.f) + ...
                     Utility_Function(g1(n,id_br,id_bf),sigma.g);
                 
-                Vnd1(n,id_br,id_bf) = Wnd + beta*(probt * Vo0(:,id_br_s,id_br_f));
+                Vnd1(n,id_br,id_bf) = Wnd + beta*(probt * Vo0(:,id_br_s,id_bf_s));
                 
                 if ( Vnd1(n,id_br,id_bf) > Vd0(n) )
-                    z1(n,id_br,id_bf) = 1
-                    Vo1(n,id_br,id_bf) = Vnd1(n,id_br,id_bf)
+                    z1(n,id_br,id_bf) = 1;
+                    Vo1(n,id_br,id_bf) = Vnd1(n,id_br,id_bf);
                 else
-                    z1(n,id_br,id_bf) = 0
-                    Vo1(n,id_br,id_bf) = Vd0(n)
+                    z1(n,id_br,id_bf) = 0;
+                    Vo1(n,id_br,id_bf) = Vd0(n);
                 end
                 
             end

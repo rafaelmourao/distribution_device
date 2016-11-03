@@ -7,9 +7,7 @@ epsilon = .1;
 %% SOLUTION
 
 Obj_func = @(p) Euler_sum_int(p,s_par,s_grid,s_state,s_gov,s_investors);
-
 status = 1;
-
 p_max = 4;
 
 %grid_p = 0:.001:p_max;
@@ -19,7 +17,7 @@ p_max = 4;
 %[sum_euler, i] = min(sum_euler_func);
 
 %p = grid_p(i);
-[p sum_euler] = fminbnd(Obj_func,0,p_max);
+[p, sum_euler] = fminbnd(Obj_func,0,p_max);
 %if p > 2.5
     
 %    grid_p = 0:.01:p_max;
@@ -37,7 +35,7 @@ p_max = 4;
     
 %end
 
-[B br bf] = Euler_sum_int(p,s_par,s_grid,s_state,s_gov,s_investors);
+[~, B, br, bf] = Euler_sum_int(p,s_par,s_grid,s_state,s_gov,s_investors);
 
 if sum_euler > epsilon
     
