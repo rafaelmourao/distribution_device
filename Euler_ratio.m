@@ -18,6 +18,8 @@ probt = prob(n,:);
 
 %% PROGRAM
 
+%INTRODUCING 'zt' HERE, DEMANDS MAKING IT BEFORE FIXING THINGS
+
 %ERROR FUNTION
 %This function identifies where there is a problem with consumption (it
 %can never be negative), for both vectors: 'x' and 'y'. They will be part 

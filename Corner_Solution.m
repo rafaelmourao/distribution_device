@@ -21,7 +21,6 @@ bft_1 = s_state.bft_1;
 bgt_1 = s_state.bgt_1;
 rt = s_state.rt;
 wt = s_state.wt;
-zt = s_state.zt;
 eft = e.f(n);
 
 %Government
@@ -66,35 +65,32 @@ brt1_c1 = squeeze(br0(:,1,1));
 
 bft1_c1 = squeeze(bf0(:,1,1));
 
-denom_r = ((1+rt)*zt*brt_1 + wt - zt*p*grid_r');
-num_r = ((zt1.^(-1/sigma.r)).*((1+rt1).^(-1/sigma.r))).*...
-        ((1+rt1)*zt1*ones(n_states,1)*grid_r + wt1 - zt1.*qt1.*brt1);
 
-denom_r_c1 = ((1+rt)*zt*brt_1 + wt);
+denom_r_c1 = ((1+rt)*brt_1 + wt);
 
-num_r_c1 = ((zt1_c1.^(-1/sigma.r)).*((1+rt1_c1).^((sigma.r-1)/sigma.r))).*...
-                (lambda.*Qr - lambda.*qt1_c1.*zt1_c1.*brt1_c1);
+num_r_c1 = ((zt1_c1.^(-1/sigma.r)).*((1+rt1_c1).^(-1/sigma.r))).*...
+                (wt1_c1 - zt1_c1.*qt1_c1.*brt1_c1);
             
 pr_0_c1 = Euler_ratio(s_par,s_state,num_r_c1,denom_r_c1,'r');
 
-denom_f_c1 = ((1+rt).^((sigma.f-1)/sigma.f)).*(Qft + bft_1/lambdat);
+denom_f_c1 = (1+rt)*(bft_1 + eft);
 
-num_f_c1 = ((zt1_c1.^(-1/sigma.f)).*((1+rt1_c1).^((sigma.f-1)/sigma.f))).*...
-                (lambda.*Qf - lambda.*qt1_c1.*zt1_c1.*bft1_c1);
+num_f_c1 = ((zt1_c1.^(-1/sigma.f)).*((1+rt1_c1).^(-1/sigma.f))).*...
+                ((1+rt1_c1)*e.f - zt1_c1.*qt1_c1.*bft1_c1);
 
 pf_0_c1 = Euler_ratio(s_par,s_state,num_f_c1,denom_f_c1,'f');
 
 
 crt1_c1 = squeeze(crt1(:,1,1));
 
-cwt1_c1 = squeeze(cwt1(:,1,1));
+cft1_c1 = squeeze(cft1(:,1,1));
 
 bgt1_c1 = squeeze(bgt1(:,1,1));
             
-denom_g_c1 = tc*(crt+cwt) - bgt_1/lambdat;
+denom_g_c1 = tc*(crt+cft) - bgt_1;
 
-num_g_c1 = (zt1_c1.^(-1/sigma.g)).*((tc*lambda).*(crt1_c1 + cwt1_c1) +...
-                lambda.*qt1_c1.*zt1_c1.*bgt1_c1);
+num_g_c1 = (zt1_c1.^(-1/sigma.g)).*(tc*(crt1_c1 + cft1_c1) +...
+                zt1_c1.*qt1_c1.*bgt1_c1);
             
 pg_0_c1 = Euler_ratio(s_par,s_state,num_g_c1,denom_g_c1,'g');
 
@@ -112,13 +108,15 @@ status2 = 1;
 
 p_max = 2;
 
-[p_c2 sum_euler2] = fminbnd(Obj_func2,0,p_max);
+[p_c2, sum_euler2] = fminbnd(Obj_func2,0,p_max);
 
-[B_c2 bf_c2] = Euler_sum_cor2(p_c2,s_par,s_grid,s_state,s_gov,s_investors);
+[B_c2, bf_c2] = Euler_sum_cor2(p_c2,s_par,s_grid,s_state,s_gov,s_investors);
 
 id_bf_c2 = find(grid_f == bf_c2);
 
 rt1_c2 = squeeze(r0(:,1,id_bf_c2));
+
+wt1_c2 = squeeze(w0(:,1,id_bf_c2));
 
 qt1_c2 = squeeze(q0(:,1,id_bf_c2));
 
@@ -126,10 +124,10 @@ zt1_c2 = squeeze(z0(:,1,id_bf_c2));
 
 brt1_c2 = squeeze(br0(:,1,id_bf_c2));
 
-denom_r_c2 = ((1+rt).^((sigma.r-1)/sigma.r)).*(Qrt + brt_1/lambdat);
+denom_r_c2 = (1+rt)*brt_1 + wt;
 
-num_r_c2 = ((zt1_c2.^(-1/sigma.r)).*((1+rt1_c2).^((sigma.r-1)/sigma.r))).*...
-                (lambda.*Qr - lambda.*qt1_c2.*zt1_c2.*brt1_c2);
+num_r_c2 = ((zt1_c2.^(-1/sigma.r)).*((1+rt1_c2).^(-1/sigma.r))).*...
+                (wt1_c2 - zt1_c2.*qt1_c2.*brt1_c2);
             
 pr_0_c2 = Euler_ratio(s_par,s_state,num_r_c2,denom_r_c2,'r');
 
@@ -165,10 +163,10 @@ zt1_c3 = squeeze(z0(:,id_br_c3,1));
 
 bft1_c3 = squeeze(bf0(:,id_br_c3,1));
 
-denom_f_c3 = ((1+rt).^((sigma.f-1)/sigma.f)).*(Qft + bft_1/lambdat);
+denom_f_c3 = (1+rt)*(eft + bft_1);
 
-num_f_c3 = ((zt1_c3.^(-1/sigma.f)).*((1+rt1_c3).^((sigma.f-1)/sigma.f))).*...
-                (lambda.*Qf - lambda.*qt1_c3.*zt1_c3.*bft1_c3);
+num_f_c3 = ((zt1_c3.^(-1/sigma.f)).*((1+rt1_c3).^(-1/sigma.f))).*...
+                ((1+rt1_c3)*e.f - zt1_c3.*qt1_c3.*bft1_c3);
             
 pf_0_c3 = Euler_ratio(s_par,s_state,num_f_c3,denom_f_c3,'f');
 
