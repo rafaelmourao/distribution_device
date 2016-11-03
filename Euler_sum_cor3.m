@@ -54,7 +54,7 @@ denom_g = tc*(crt+cft) - bgt_1 + p*grid_r_g';
 num_g = ((tc*(crt1+cft1) - ones(n_states,1)*grid_r_g +...
                 zt1.*qt1.*bgt1));
 
-ratio_g = Euler_ratio(s_par,s_state,s_investors,num_g,denom_g,'g');
+ratio_g = Euler_ratio(s_par,s_state,zt1,num_g,denom_g,'g');
 
 euler_g = abs(ratio_g - p);
 
@@ -64,7 +64,7 @@ denom_r = ((1+rt)*brt_1 + wt - p*grid_r');
 num_r = ((1+rt1).^(-1/sigma.r)).*...
         ((1+rt1)*ones(n_states,1)*grid_r + wt1 - zt1.*qt1.*brt1);
             
-ratio_r = Euler_ratio(s_par,s_state,s_investors,num_r,denom_r,'r');
+ratio_r = Euler_ratio(s_par,s_state,zt1,num_r,denom_r,'r');
 
 euler_r = abs(p - ratio_r);
 
