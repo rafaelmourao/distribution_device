@@ -1,4 +1,4 @@
-%% SOVEREIGN DEFAULT AS A DISTRIBUTION DEVICE - November 2016
+%% SOVEREIGN DEFAULT AS A DISTRIBUTION DEVICE - First version - 2014
 
 % ASSUMPTIONS:  %BOND MARKET: TELMER ARTICLE TO SOLVE EULER EQUATIONS
 
@@ -179,6 +179,7 @@ while dist > epsilon && t <= 200
     w0 = w1;
     q0 = q1;
     
+   
     s_investors = struct('r0',r0,'w0',w0,'q0',q0,'z0',z0,'br0',br0,'bf0',bf0);
     
     for id_br = 1:n_bonds                               %RESIDENTS bonds from previous period
