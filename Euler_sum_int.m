@@ -53,22 +53,22 @@ bft1 = s_investors.bft1;
 %YOU DO NEED 'zt1'
 
 denom_g = tc*(crt+cft) + (p*grid_g' - bgt_1);
-num_g = (zt1.^(-1/sigma.g)).*(tc*(crt1+cft1) + qt1.*bgt1)...
-                - ones(n_states,1)*grid_g;
-ratio_g = Euler_ratio(s_par,s_state,num_g,denom_g,'g');
+num_g = (tc*(crt1+cft1) + zt1.*(qt1.*bgt1...
+                - ones(n_states,1)*grid_g));
+ratio_g = Euler_ratio(s_par,s_state,zt1,num_g,denom_g,'g');
 euler_g = abs(ratio_g - p);
 
 denom_r = ((1+rt)*brt_1 + wt - p*grid_r');
-num_r = ((zt1.^(-1/sigma.r)).*((1+rt1).^(-1/sigma.r))).*...
+num_r = ((1+rt1).^(-1/sigma.r)).*...
         ((1+rt1)*zt1*ones(n_states,1)*grid_r + wt1 - zt1.*qt1.*brt1);
-ratio_r = Euler_ratio(s_par,s_state,num_r,denom_r,'r');
+ratio_r = Euler_ratio(s_par,s_state,zt1,num_r,denom_r,'r');
 euler_r = abs(p - ratio_r);
 
 
 denom_f = ((1+rt)*(eft + bft_1) - p*grid_f');
-num_f = ((zt1.^(-1/sigma.f)).*((1+rt1).^(-1/sigma.f))).*...
+num_f = ((1+rt1).^(-1/sigma.f)).*...
         ((1+rt1)*(e.f*ones(1,l_grid_g) + zt1*ones(n_states,1)*grid_f) - zt1.*qt1.*bft1);
-ratio_f = Euler_ratio(s_par,s_state,num_f,denom_f,'f');
+ratio_f = Euler_ratio(s_par,s_state,zt1,num_f,denom_f,'f');
 euler_f = abs(p - ratio_f);
 
 

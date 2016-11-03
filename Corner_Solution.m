@@ -68,17 +68,17 @@ bft1_c1 = squeeze(bf0(:,1,1));
 
 denom_r_c1 = ((1+rt)*brt_1 + wt);
 
-num_r_c1 = ((zt1_c1.^(-1/sigma.r)).*((1+rt1_c1).^(-1/sigma.r))).*...
+num_r_c1 = ((1+rt1_c1).^(-1/sigma.r)).*...
                 (wt1_c1 - zt1_c1.*qt1_c1.*brt1_c1);
             
-pr_0_c1 = Euler_ratio(s_par,s_state,num_r_c1,denom_r_c1,'r');
+pr_0_c1 = Euler_ratio(s_par,s_state,zt1_c1,num_r_c1,denom_r_c1,'r');
 
 denom_f_c1 = (1+rt)*(bft_1 + eft);
 
-num_f_c1 = ((zt1_c1.^(-1/sigma.f)).*((1+rt1_c1).^(-1/sigma.f))).*...
+num_f_c1 = ((1+rt1_c1).^(-1/sigma.f)).*...
                 ((1+rt1_c1)*e.f - zt1_c1.*qt1_c1.*bft1_c1);
 
-pf_0_c1 = Euler_ratio(s_par,s_state,num_f_c1,denom_f_c1,'f');
+pf_0_c1 = Euler_ratio(s_par,s_state,zt1_c1,num_f_c1,denom_f_c1,'f');
 
 
 crt1_c1 = squeeze(crt1(:,1,1));
@@ -89,10 +89,10 @@ bgt1_c1 = squeeze(bgt1(:,1,1));
             
 denom_g_c1 = tc*(crt+cft) - bgt_1;
 
-num_g_c1 = (zt1_c1.^(-1/sigma.g)).*(tc*(crt1_c1 + cft1_c1) +...
+num_g_c1 = (tc*(crt1_c1 + cft1_c1) +...
                 zt1_c1.*qt1_c1.*bgt1_c1);
             
-pg_0_c1 = Euler_ratio(s_par,s_state,num_g_c1,denom_g_c1,'g');
+pg_0_c1 = Euler_ratio(s_par,s_state,zt1_c1,num_g_c1,denom_g_c1,'g');
 
 p_c1 = max(pr_0_c1,pf_0_c1);
 
@@ -126,10 +126,10 @@ brt1_c2 = squeeze(br0(:,1,id_bf_c2));
 
 denom_r_c2 = (1+rt)*brt_1 + wt;
 
-num_r_c2 = ((zt1_c2.^(-1/sigma.r)).*((1+rt1_c2).^(-1/sigma.r))).*...
+num_r_c2 = ((1+rt1_c2).^(-1/sigma.r)).*...
                 (wt1_c2 - zt1_c2.*qt1_c2.*brt1_c2);
             
-pr_0_c2 = Euler_ratio(s_par,s_state,num_r_c2,denom_r_c2,'r');
+pr_0_c2 = Euler_ratio(s_par,s_state,zt1_c2,num_r_c2,denom_r_c2,'r');
 
 if sum_euler2 > epsilon || pr_0_c2 > p_c2
     
@@ -165,10 +165,10 @@ bft1_c3 = squeeze(bf0(:,id_br_c3,1));
 
 denom_f_c3 = (1+rt)*(eft + bft_1);
 
-num_f_c3 = ((zt1_c3.^(-1/sigma.f)).*((1+rt1_c3).^(-1/sigma.f))).*...
+num_f_c3 = ((1+rt1_c3).^(-1/sigma.f)).*...
                 ((1+rt1_c3)*e.f - zt1_c3.*qt1_c3.*bft1_c3);
             
-pf_0_c3 = Euler_ratio(s_par,s_state,num_f_c3,denom_f_c3,'f');
+pf_0_c3 = Euler_ratio(s_par,s_state,zt1_c3,num_f_c3,denom_f_c3,'f');
 
 if sum_euler3 > epsilon || pf_0_c3 > p_c3
     
