@@ -179,18 +179,8 @@ while dist > epsilon && t <= 200
     w0 = w1;
     q0 = q1;
     
-    rt1 = r0(:,:);         %Future interest rate 
-    wt1 = w0(:,:);         %Future interest rate
-    qt1 = q0(:,:);         %Future bond price
-    zt1 = z0(:,:);         %Future Default
-    brt1 = br0(:,:);     %Resident's future bond supply
-    bft1 = bf0(:,:);     %Resident's future bond supply
-    bgt1 = bg0(:,:);     %Resident's future bond supply
-    crt1 = cr0(:,:);     %Future consumption for RESIDENT investor
-    cft1 = cf0(:,:);     %Future consumption for RESIDENT investor
-    
-    s_investors = struct('r0',r0,'w0',w0,'q0',q0,'z0',z0,'br0',br0,'bf0',bf0,...
-        'rt1',rt1,'wt1',wt1,'qt1',qt1,'zt1',zt1,'brt1',brt1,'bft1',bft1);
+   
+    s_investors = struct('r0',r0,'w0',w0,'q0',q0,'z0',z0,'br0',br0,'bf0',bf0);
     
     for id_br = 1:n_bonds                               %RESIDENTS bonds from previous period
         brt_1 = grid_b_r(id_br);

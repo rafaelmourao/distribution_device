@@ -62,5 +62,3 @@ Bt = grid_r_g(b_star);
 brt = grid_r(b_star);
 
 end
-
-end

@@ -32,12 +32,12 @@ crt1 = s_gov.crt1;
 cft1 = s_gov.cft1;
 
 %Investors
-rt1 = s_investors.rt1;
-wt1 = s_investors.wt1;
-qt1 = s_investors.qt1;
-zt1 = s_investors.zt1;
-brt1 = s_investors.brt1;
-bft1 = s_investors.bft1;
+rt1 = s_investors.r0(:,:);
+wt1 = s_investors.w0(:,:);
+qt1 = s_investors.q0(:,:);
+zt1 = s_investors.z0(:,:);
+brt1 = s_investors.br0(:,:);
+bft1 = s_investors.bf0(:,:);
 
 %% ALGORITHM
 

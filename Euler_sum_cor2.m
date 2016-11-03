@@ -63,5 +63,3 @@ Bt = grid_f(b_star);
 bft = grid_f(b_star);
     
 end
-
-end
