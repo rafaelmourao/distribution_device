@@ -1,4 +1,4 @@
-%% SOVEREIGN DEFAULT AS A DISTRIBUTION DEVICE - First version - 2014
+%% SOVEREIGN DEFAULT AS A DISTRIBUTION DEVICE - November 2016
 
 % ASSUMPTIONS:  %BOND MARKET: TELMER ARTICLE TO SOLVE EULER EQUATIONS
 
@@ -141,8 +141,8 @@ for n = 1:n_states
         alpha*(e.f(n).^(rho-1)).*(alpha*(e.f(n).^rho) + (1-alpha)).^(1/rho-1);
     w_d(n) = ...
         (1-alpha)*((alpha*(e.f(n))^(rho)) + (1-alpha))^(1/rho-1);
-    cr_d(n) = (1/(1+tc))*w_d(n);                     
-    cf_d(n) = (1/(1+tc))*(1+r_d(n))*e.f(n);           
+    cr_d(n) = (1/(1+tc))*w_d(n);
+    cf_d(n) = (1/(1+tc))*(1+r_d(n))*e.f(n);
     g_d(n) = tc*(cr_d(n) + cf_d(n));
     Wd(n) =  Utility_Function(cr_d(n),sigma.r) +  Utility_Function(cf_d(n),sigma.f) ...
         +  Utility_Function(g_d(n),sigma.g);
@@ -179,7 +179,7 @@ while dist > epsilon && t <= 200
     w0 = w1;
     q0 = q1;
     
-   
+    
     s_investors = struct('r0',r0,'w0',w0,'q0',q0,'z0',z0,'br0',br0,'bf0',bf0);
     
     for id_br = 1:n_bonds                               %RESIDENTS bonds from previous period
@@ -196,7 +196,8 @@ while dist > epsilon && t <= 200
                 wt = w0(n,id_br,id_bf);                 %Current Interest Rate
                 zt = z0(n,id_br,id_bf);                 %Current Default Decision
                 
-                s_state = struct('rt',rt,'wt',wt,'zt',zt,'n',n,'brt_1',brt_1,'bft_1',bft_1,'bgt_1',bgt_1);
+                s_state = struct('rt',rt,'wt',wt,'zt',zt,'n',n,...
+                    'brt_1',brt_1,'bft_1',bft_1,'bgt_1',bgt_1);
                 
                 %Variables that agents will use as known values when making their decisions
                 
@@ -207,20 +208,11 @@ while dist > epsilon && t <= 200
                 s_gov = struct('crt',crt,'cft',cft,'bgt1',bgt1,'bg0',bg0,...
                     'cr0', cr0, 'cf0', cf0, 'crt1',crt1,'cft1',cft1);
                 
-                
                 %**********%
-                
-                if dist < 10
-                    
-                    vamo_ver = 1;
-                    
-                end
-                
                 [p, br_s, bf_s, bg_s] = ...
                     Solution(s_par,s_grid,s_state,s_gov,s_investors);
                 id_br_s = find(grid_b_r == br_s);
                 id_bf_s = find(grid_b_f == bf_s);
-                
                 %**********%
                 
                 q1(n,id_br,id_bf) = p;                              %Equilibrium price for the Bonds' market
