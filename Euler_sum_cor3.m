@@ -11,7 +11,6 @@ n_states = s_par.n_states;
 
 %Grid
 grid_r = s_grid.grid_b_r;
-grid_r_g = grid_r + 1e-10;
 
 %State
 brt_1 = s_state.brt_1;
@@ -40,24 +39,22 @@ cft1 = s_gov.cf0(:,:,1);
 
 %% ALGORITHM
 
-%JUST FOR YOU TO KNOW -> YOU'RE GOING TO HAVE PROBLEMS WITH
-%THE 'zt1' IN ALL THE NUMERATORS: IT CAN BECOME ZERO AND
-%IT'S RAISED TO THE POWER OF A NEGATIVE NUMBER. YOU MUST
-%FIX THAT LATER
-
-denom_g = tc*(crt+cft) - bgt_1 + p*grid_r_g';
-num_g = ((tc*(crt1+cft1) - ones(n_states,1)*grid_r_g +...
+denom_g = tc*(crt+cft) - bgt_1 + p*grid_r';
+num_g = ((tc*(crt1+cft1) - repmat(grid_r,n_states,1) +...
                 zt1.*qt1.*bgt1));
 ratio_g = Euler_ratio(s_par,s_state,zt1,num_g,denom_g,'g');
 euler_g = abs(ratio_g - p);
+
+
 denom_r = ((1+rt)*brt_1 + wt - p*grid_r');
 num_r = ((1+rt1).^(-1/sigma.r)).*...
-        ((1+rt1).*repmat(grid_r,n_states,1) + wt1 - zt1.*qt1.*brt1);
- 
+        (bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1);
 ratio_r = Euler_ratio(s_par,s_state,zt1,num_r,denom_r,'r');
 euler_r = abs(p - ratio_r);
 
 [fval, b_star] = min(euler_g + euler_r);
+
+
 Bt = grid_r_g(b_star);
 brt = grid_r(b_star);
 

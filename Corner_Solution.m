@@ -43,7 +43,7 @@ bf0 = s_investors.bf0;
 %% CORNER SOLUTIONS: CASES
 
 %%%%% CASE 1: B = 0 %%%%%
-B_c1 = 1e-10;
+B_c1 = 0;
 br_c1 = 0;
 bf_c1 = 1e-10;
 rt1_c1 = r0(:,1,1);
@@ -116,7 +116,7 @@ if sum_euler2 > epsilon || pr_0_c2 > p_c2
 end
 
 %%%%% CASE 3: bf = 0 %%%%%
-bf_c3 = 1e-10;
+bf_c3 = 0;
 
 Obj_func3 = @(p) Euler_sum_cor3(p,s_par,s_grid,s_state,s_gov,s_investors);
 
@@ -148,9 +148,9 @@ end
 
 
 %CASE 4: B = 0 and br = 0
-B_c4 = 1e-10;
+B_c4 = 0;
 br_c4 = 0;
-bf_c4 = 1e-10;  
+bf_c4 = 0;  
 pr_0_c4 = pr_0_c1;
 pf_0_c4 = pf_0_c1;                        
 pg_0_c4 = pg_0_c1;
@@ -159,9 +159,9 @@ status4 = (p_c4 < pg_0_c4) && (p_c4 > pr_0_c4);
 
 
 %CASE 5: B = 0 and bf = 0
-B_c5 = 1e-10;
+B_c5 = 0;
 br_c5 = 0;
-bf_c5 = 1e-10;
+bf_c5 = 0;
 pr_0_c5 = pr_0_c1;
 pf_0_c5 = pf_0_c1;                        
 pg_0_c5 = pg_0_c1;
@@ -170,9 +170,9 @@ status5 = (p_c5 < pg_0_c5) && (p_c5 > pf_0_c5);
 
 
 %CASE 6: br = 0 and bf = 0
-B_c6 = 1e-10;
+B_c6 = 0;
 br_c6 = 0;
-bf_c6 = 1e-10;
+bf_c6 = 0;
 pr_0_c6 = pr_0_c1;
 pf_0_c6 = pf_0_c1;                        
 pg_0_c6 = pg_0_c1;

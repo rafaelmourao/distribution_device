@@ -52,14 +52,14 @@ euler_g = abs(ratio_g - p);
 
 denom_r = ((1+rt)*brt_1 + wt - p*grid_r');
 num_r = ((1+rt1).^(-1/sigma.r)).*...
-        ((1+rt1).*zt1.*repmat(grid_r,n_states,1) + wt1 - zt1.*qt1.*brt1);
+        (bsxfun(@times,(1+rt1).*zt1,grid_r) + wt1 - zt1.*qt1.*brt1);
 ratio_r = Euler_ratio(s_par,s_state,zt1,num_r,denom_r,'r');
 euler_r = abs(p - ratio_r);
 
 
 denom_f = ((1+rt)*(eft + bft_1) - p*grid_f');
 num_f = ((1+rt1).^(-1/sigma.f)).*...
-        ((1+rt1).*(repmat(e.f,1,l_grid_g) + zt1.*repmat(grid_f,n_states,1)) - zt1.*qt1.*bft1);
+        ((1+rt1).*(repmat(e.f,1,l_grid_g) + bsxfun(@times,zt1,grid_f)) - zt1.*qt1.*bft1);
 ratio_f = Euler_ratio(s_par,s_state,zt1,num_f,denom_f,'f');
 euler_f = abs(p - ratio_f);
 
