@@ -21,15 +21,14 @@ bft_1 = s_state.bft_1;
 bgt_1 = s_state.bgt_1;
 rt = s_state.rt;
 wt = s_state.wt;
-zt = s_state.zt;
 eft = e.f(n);
 
 %Government
 crt = s_gov.crt;
 cft = s_gov.cft;
-bgt1 = s_gov.bgt1;
-crt1 = s_gov.crt1;
-cft1 = s_gov.cft1;
+bgt1 = s_gov.bg0(:,:);
+crt1 = s_gov.cr0(:,:);
+cft1 = s_gov.cf0(:,:);
 
 %Investors
 rt1 = s_investors.r0(:,:);
@@ -41,18 +40,13 @@ bft1 = s_investors.bf0(:,:);
 
 %% ALGORITHM
 
-%JUST FOR YOU TO KNOW -> YOU'RE GOING TO HAVE PROBLEMS WITH
-%THE 'zt1' IN ALL THE NUMERATORS: IT CAN BECOME ZERO AND
-%IT'S RAISED TO THE POWER OF A NEGATIVE NUMBER. YOU MUST
-%FIX THAT LATER
-
 %YOU DON'T NEED TO CONSIDER 'zt' IN THE DENOMINADOR, SINCE 
 %THE BOND MARKET MUST BE OPEN FOR THIS CALCULATION DO BE DONE
 %YOU DO NEED 'zt1'
 
 denom_g = tc*(crt+cft) + (p*grid_g' - bgt_1);
 num_g = (tc*(crt1+cft1) + zt1.*(qt1.*bgt1...
-                - ones(n_states,1)*grid_g));
+                - repmat(grid_g,n_states,1)));
 ratio_g = Euler_ratio(s_par,s_state,zt1,num_g,denom_g,'g');
 euler_g = abs(ratio_g - p);
 

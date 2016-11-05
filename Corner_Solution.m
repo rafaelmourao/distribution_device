@@ -27,9 +27,9 @@ eft = e.f(n);
 %Government
 crt = s_gov.crt;
 cft = s_gov.cft;
-bgt1 = s_gov.bgt1;
-crt1 = s_gov.crt1;
-cft1 = s_gov.cft1;
+bgt1 = s_gov.bg0;
+crt1 = s_gov.cr0;
+cft1 = s_gov.cf0;
 
 %Investors
 r0 = s_investors.r0;
@@ -39,11 +39,6 @@ z0 = s_investors.z0;
 br0 = s_investors.br0;
 bf0 = s_investors.bf0;
 
-
-%JUST FOR YOU TO KNOW -> YOU'RE GOING TO HAVE PROBLEMS WITH
-%THE 'zt1' IN ALL THE NUMERATORS: IT CAN BECOME ZERO AND
-%IT'S RAISED TO THE POWER OF A NEGATIVE NUMBER. YOU MUST
-%FIX THAT LATER
 
 %% CORNER SOLUTIONS: CASES
 

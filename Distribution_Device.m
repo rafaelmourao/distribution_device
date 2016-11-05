@@ -41,7 +41,7 @@ sigma.f = 2;
 %Government
 sigma.g = 2;                                        %Utility function parameter: risk aversion
 phi = .282;                                         %Probability of redemption (Arellano)
-lambda = 1;                                          %Government preference parameter: foreigners relative to residents
+lambda = 1;                                         %Government preference parameter: foreigners relative to residents
 tc = .3;                                            %Tax rate over CONSUMPTION
 
 %Firm
@@ -78,18 +78,19 @@ s_grid = struct('grid_b_r',grid_b_r,'grid_b_f',grid_b_f,...
 
 %% VALUE FUNCTIONS FOR THE GOVERNMENT
 
-Vd = zeros(n_states,1);                             %Value function in case of DEFAULT
-Vnd = zeros(n_states,n_bonds,n_bonds);        %Value function in case of NO DEFAULT
-Vo = zeros(n_states,n_bonds,n_bonds);         %Value function for the OPTION of DEFAULT
+Vd = zeros(n_states,1);                         %Value function in case of DEFAULT
+Vnd = zeros(n_states,n_bonds,n_bonds);          %Value function in case of NO DEFAULT
+Vo = zeros(n_states,n_bonds,n_bonds);           %Value function for the OPTION of DEFAULT
 
 %% POLICY FUNCTIONS
 
 %Consumers
-kf = zeros(n_states,n_bonds,n_bonds);          %CAPITAL policy funtion for FOREIGNERS
 
 cr = zeros(n_states,n_bonds,n_bonds);          %CONSUMPTION policy funtion for RESIDENTS
 cf = zeros(n_states,n_bonds,n_bonds);          %CONSUMPTION policy funtion for FOREIGNERS
+
 kr = zeros(n_states,n_bonds,n_bonds);          %CAPITAL policy funtion for RESIDENTS
+kf = zeros(n_states,n_bonds,n_bonds);          %CAPITAL policy funtion for FOREIGNERS
 
 br = zeros(n_states,n_bonds,n_bonds);          %BONDS policy funtion for RESIDENTS
 bf = zeros(n_states,n_bonds,n_bonds);          %BONDS policy funtion for FOREIGNERS
@@ -118,9 +119,9 @@ bf1 = bf;
 kr1 = repmat([0;0;0],[1 n_bonds n_bonds]);    %Residents don't have any resources to lend in the very beginning
 kf1 = repmat(e.f,[1 n_bonds n_bonds]);        %Foreigners only have their endowments to lend in the very beginning
 
-r1 = r + alpha*((kr1+kf1).^(rho-1)).*(alpha*((kr1+kf1).^rho) + (1-alpha)).^(1/rho-1);
-w1 = w + (1-alpha)*(alpha*((kr1+kf1).^rho) + (1-alpha)).^(1/rho-1);
-q1 = q;
+r1 = r + alpha*((kr1+kf1).^(rho-1)).*((alpha*((kr1+kf1).^rho) + (1-alpha)).^(1/rho-1));
+w1 = w + (1-alpha)*((alpha*((kr1+kf1).^rho) + (1-alpha)).^(1/rho-1));
+q1 = q + 1;
 
 cr1 = cr + (1/(1+tc))*((1+r1).*kr1 + w1);
 cf1 = cf + (1/(1+tc))*(1+r1).*kf1;
@@ -138,13 +139,13 @@ g_d = zeros(n_states,1);
 Wd = zeros(n_states,1);
 for n = 1:n_states
     r_d(n) = ...
-        alpha*(e.f(n).^(rho-1)).*(alpha*(e.f(n).^rho) + (1-alpha)).^(1/rho-1);
+        alpha*(e.f(n).^(rho-1)).*((alpha*(e.f(n).^rho) + (1-alpha)).^(1/rho-1));
     w_d(n) = ...
         (1-alpha)*((alpha*(e.f(n))^(rho)) + (1-alpha))^(1/rho-1);
     cr_d(n) = (1/(1+tc))*w_d(n);
     cf_d(n) = (1/(1+tc))*(1+r_d(n))*e.f(n);
     g_d(n) = tc*(cr_d(n) + cf_d(n));
-    Wd(n) =  Utility_Function(cr_d(n),sigma.r) +  Utility_Function(cf_d(n),sigma.f) ...
+    Wd(n) =  Utility_Function(cr_d(n),sigma.r) +  lambda*Utility_Function(cf_d(n),sigma.f) ...
         +  Utility_Function(g_d(n),sigma.g);
 end
 
@@ -205,8 +206,8 @@ while dist > epsilon && t <= 200
                 crt = cr0(n,id_br,id_bf);               %Current Consumption for RESIDENT investor
                 cft = cf0(n,id_br,id_bf);               %Current Consumption for FOREIGN investor
                 
-                s_gov = struct('crt',crt,'cft',cft,'bgt1',bgt1,'bg0',bg0,...
-                    'cr0', cr0, 'cf0', cf0, 'crt1',crt1,'cft1',cft1);
+                s_gov = struct('crt',crt,'cft',cft,'bg0',bg0,...
+                    'cr0', cr0, 'cf0', cf0);
                 
                 %**********%
                 [p, br_s, bf_s, bg_s] = ...
@@ -226,7 +227,7 @@ while dist > epsilon && t <= 200
                 
                 r1(n,id_br,id_bf) = ...
                     alpha*((kr1(n,id_br,id_bf)+kf1(n,id_br,id_bf))^(rho-1))*...
-                    (alpha*((kr1(n,id_br,id_bf)+kf1(n,id_br,id_bf))^(rho)) + (1-alpha))^(1/rho-1);              %Interest rate
+                    ((alpha*((kr1(n,id_br,id_bf)+kf1(n,id_br,id_bf))^(rho)) + (1-alpha))^(1/rho-1));            %Interest rate
                 w1(n,id_br,id_bf) = ...
                     (1-alpha)*(alpha*((kr1(n,id_br,id_bf)+kf1(n,id_br,id_bf))^(rho)) + (1-alpha))^(1/rho-1);    %Wage
                 
@@ -238,17 +239,19 @@ while dist > epsilon && t <= 200
                 g1(n,id_br,id_bf) = tc*(cr1(n,id_br,id_bf) + cf1(n,id_br,id_bf)) + p*bg_s - bgt_1;
                 
                 Wnd = Utility_Function(cr1(n,id_br,id_bf),sigma.r) + ...
-                    Utility_Function(cf1(n,id_br,id_bf),sigma.f) + ...
+                    lambda*Utility_Function(cf1(n,id_br,id_bf),sigma.f) + ...
                     Utility_Function(g1(n,id_br,id_bf),sigma.g);
                 
                 Vnd1(n,id_br,id_bf) = Wnd + beta*(probt * Vo0(:,id_br_s,id_bf_s));
                 
-                if ( Vnd1(n,id_br,id_bf) > Vd0(n) )
+                Vd1 = Wd + beta * prob * ( phi * Vo0(:,1,1) + (1-phi) * Vd0 );
+                
+                if ( Vnd1(n,id_br,id_bf) > Vd1(n) )
                     z1(n,id_br,id_bf) = 1;
                     Vo1(n,id_br,id_bf) = Vnd1(n,id_br,id_bf);
                 else
                     z1(n,id_br,id_bf) = 0;
-                    Vo1(n,id_br,id_bf) = Vd0(n);
+                    Vo1(n,id_br,id_bf) = Vd1(n);
                 end
                 
             end
@@ -256,8 +259,6 @@ while dist > epsilon && t <= 200
         end
         
     end
-    
-    Vd1 = Wd + beta * prob * ( phi * Vo1(:,1,1) + (1-phi) * Vd0 );
     
     dist = sum(q1(:) - q0(:))^2
     
