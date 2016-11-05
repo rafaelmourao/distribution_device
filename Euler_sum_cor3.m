@@ -55,7 +55,7 @@ euler_r = abs(p - ratio_r);
 [fval, b_star] = min(euler_g + euler_r);
 
 
-Bt = grid_r_g(b_star);
+Bt = grid_r(b_star);
 brt = grid_r(b_star);
 
 end
