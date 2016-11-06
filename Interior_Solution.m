@@ -8,7 +8,7 @@ epsilon = .1;
 
 Obj_func = @(p) Euler_sum_int(p,s_par,s_grid,s_state,s_gov,s_investors);
 status = 1;
-p_max = 4;
+p_max = 10;
 
 %grid_p = 0:.001:p_max;
 

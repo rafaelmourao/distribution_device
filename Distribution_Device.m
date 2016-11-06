@@ -42,14 +42,14 @@ sigma.f = 2;
 sigma.g = 2;                                        %Utility function parameter: risk aversion
 phi = .282;                                         %Probability of redemption (Arellano)
 lambda = 1;                                         %Government preference parameter: foreigners relative to residents
-tc = .3;                                            %Tax rate over CONSUMPTION
+tc = .1;                                            %Tax rate over CONSUMPTION
 
 %Firm
 alpha = .3;                                         %Participation of capital on productio
 rho = -1;                                           %Elasticity of Substitution between capital and labor is 1/2 (=1/(1-rho))
 
 %Foreigner wealth evolution
-e.f = [.5;1;1.5];
+e.f = [.1;.2;.3];
 
 %Transition Matrix
 prob = [.3 .6 .1;.2 .6 .2;.2 .5 .3];                %Construction od the Probability matrix
@@ -63,7 +63,7 @@ s_par = struct('epsilon',epsilon,'beta',beta,'sigma',sigma,...
 
 %Public Bonds
 min_b = 0;                                          %Minimum value for bonds
-max_b = .8;                                         %Maximum value for bonds
+max_b = .5;                                         %Maximum value for bonds
 n_bonds = 21;                                       %Quantity of points on the grid for the investors
 
 grid_b_r = linspace(min_b,max_b,n_bonds);            %Grid for resident bonds:

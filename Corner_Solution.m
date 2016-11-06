@@ -87,7 +87,7 @@ br_c2 = 0;
 Obj_func2 = @(p) Euler_sum_cor2(p,s_par,s_grid,s_state,s_gov,s_investors);
 
 status2 = 1;
-p_max = 2;
+p_max = 10;
 
 [p_c2, sum_euler2] = fminbnd(Obj_func2,0,p_max);
 
@@ -121,7 +121,7 @@ bf_c3 = 0;
 Obj_func3 = @(p) Euler_sum_cor3(p,s_par,s_grid,s_state,s_gov,s_investors);
 
 status3 = 1;
-p_max = 2;
+p_max = 10;
 
 [p_c3, sum_euler3] = fminbnd(Obj_func3,0,p_max);
 
