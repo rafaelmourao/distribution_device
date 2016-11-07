@@ -42,7 +42,7 @@ sigma.f = 2;
 sigma.g = 2;                                        %Utility function parameter: risk aversion
 phi = .282;                                         %Probability of redemption (Arellano)
 lambda = 1;                                         %Government preference parameter: foreigners relative to residents
-tc = .1;                                            %Tax rate over CONSUMPTION
+tc = .3;                                            %Tax rate over CONSUMPTION
 
 %Firm
 alpha = .3;                                         %Participation of capital on productio
@@ -63,7 +63,7 @@ s_par = struct('epsilon',epsilon,'beta',beta,'sigma',sigma,...
 
 %Public Bonds
 min_b = 0;                                          %Minimum value for bonds
-max_b = .5;                                         %Maximum value for bonds
+max_b = 1;                                         %Maximum value for bonds
 n_bonds = 21;                                       %Quantity of points on the grid for the investors
 
 grid_b_r = linspace(min_b,max_b,n_bonds);            %Grid for resident bonds:
@@ -154,6 +154,7 @@ t = 1;                                              %Number of interations
 while dist > epsilon && t <= 200
     
     tic
+    t = t+1;
     
     %Updating process of Iteration
     %Observation: For the first iteration, the number of bonds owned by
@@ -182,6 +183,8 @@ while dist > epsilon && t <= 200
     
     
     s_investors = struct('r0',r0,'w0',w0,'q0',q0,'z0',z0,'br0',br0,'bf0',bf0);
+
+    Vd1 = Wd + beta * prob * ( phi * Vo0(:,1,1) + (1-phi) * Vd0 );
     
     for id_br = 1:n_bonds                               %RESIDENTS bonds from previous period
         brt_1 = grid_b_r(id_br);
@@ -244,8 +247,6 @@ while dist > epsilon && t <= 200
                 
                 Vnd1(n,id_br,id_bf) = Wnd + beta*(probt * Vo0(:,id_br_s,id_bf_s));
                 
-                Vd1 = Wd + beta * prob * ( phi * Vo0(:,1,1) + (1-phi) * Vd0 );
-                
                 if ( Vnd1(n,id_br,id_bf) > Vd1(n) )
                     z1(n,id_br,id_bf) = 1;
                     Vo1(n,id_br,id_bf) = Vnd1(n,id_br,id_bf);
@@ -260,9 +261,10 @@ while dist > epsilon && t <= 200
         
     end
     
-    dist = sum(q1(:) - q0(:))^2
-    
-    toc
+    time = toc;
+    fprintf('Iter: %d, distance: %.6f, time: %.2f seconds\n',t,dist,time) 
+    disp('Prices in the 1 state:')
+    disp(q1(1:10))
     
     
 end
