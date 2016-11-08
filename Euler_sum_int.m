@@ -1,12 +1,10 @@
-function [varargout] = Euler_sum_int(p,s_par,s_grid,s_state,s_gov,s_investors)
+function [fval, Bt, brt, bft ] = Euler_sum_int(p,s_par,s_grid,s_state,s_gov,s_investors)
 
 %% VARIABLES NEEDED
 
 %Parameters
 sigma = s_par.sigma;
-lambda = s_par.lambda;
-Qr = s_par.Qr;
-Qf = s_par.Qf;
+e.f = s_par.e.f;
 tc = s_par.tc;
 n_states = s_par.n_states;
 
@@ -22,67 +20,56 @@ brt_1 = s_state.brt_1;
 bft_1 = s_state.bft_1;
 bgt_1 = s_state.bgt_1;
 rt = s_state.rt;
-lambdat = lambda(n);
-Qrt = Qr(n);
-Qft = Qf(n);
-Qg = lambda/2;
-Qgt = lambdat/2;
+wt = s_state.wt;
+eft = e.f(n);
 
 %Government
 crt = s_gov.crt;
-cwt = s_gov.cwt;
-bgt1 = s_gov.bgt1;
-crt1 = s_gov.crt1;
-cwt1 = s_gov.cwt1;
+cft = s_gov.cft;
+bgt1 = s_gov.bg0(:,:);
+crt1 = s_gov.cr0(:,:);
+cft1 = s_gov.cf0(:,:);
 
 %Investors
-rt1 = s_investors.rt1;
-qt1 = s_investors.qt1;
-zt1 = s_investors.zt1;
-brt1 = s_investors.brt1;
-bft1 = s_investors.bft1;
+rt1 = s_investors.r0(:,:);
+wt1 = s_investors.w0(:,:);
+qt1 = s_investors.q0(:,:);
+zt1 = s_investors.z0(:,:);
+brt1 = s_investors.br0(:,:);
+bft1 = s_investors.bf0(:,:);
 
 %% ALGORITHM
 
-%JUST FOR YOU TO KNOW -> YOU'RE GOING TO HAVE PROBLEMS WITH
-%THE 'zt1' IN ALL THE NUMERATORS: IT CAN BECOME ZERO AND
-%IT'S RAISED TO THE POWER OF A NEGATIVE NUMBER. YOU MUST
-%FIX THAT LATER
+%YOU DON'T NEED TO CONSIDER 'zt' IN THE DENOMINADOR, SINCE 
+%THE BOND MARKET MUST BE OPEN FOR THIS CALCULATION DO BE DONE
+%YOU DO NEED 'zt1'
 
-denom_g = Qgt + tc*(crt+cwt) - bgt_1/lambdat + p*grid_g';
-num_g = (zt1.^(-1/sigma.g)).*(Qg*ones(1,l_grid_g) + (tc*lambda)*ones(1,l_grid_g).*(crt1+cwt1) - ones(n_states,1)*grid_g +...
-                (lambda*ones(1,l_grid_g)).*qt1.*zt1.*bgt1);
-ratio_g = Euler_ratio(s_par,s_state,num_g,denom_g,'g');
+denom_g = tc*(((1+rt)*brt_1 + wt - p*grid_r') + ...
+    ((1+rt)*(eft + bft_1) - p*grid_f')) + ...
+    (p*grid_g' - bgt_1);
+num_g = (tc*((bsxfun(@times,(1+rt1).*zt1,grid_r) + wt1 - zt1.*qt1.*brt1) + ...
+    ((1+rt1).*(repmat(e.f,1,l_grid_g) + bsxfun(@times,zt1,grid_f)) - zt1.*qt1.*bft1)) + ...
+    zt1.*(qt1.*bgt1 - repmat(grid_g,n_states,1)));
+ratio_g = Euler_ratio(s_par,s_state,zt1,num_g,denom_g,'g');
 euler_g = abs(ratio_g - p);
 
-denom_r = ((1+rt).^((sigma.r-1)/sigma.r)).*(Qrt + brt_1/lambdat - p*grid_r');
-num_r = ((zt1.^(-1/sigma.r)).*((1+rt1).^((sigma.r-1)/sigma.r))).*...
-        ((lambda.*Qr)*ones(1,l_grid_g) + ones(n_states,1)*grid_r - (lambda*ones(1,l_grid_g)).*qt1.*zt1.*brt1);
-ratio_r = Euler_ratio(s_par,s_state,num_r,denom_r,'r');
+denom_r = ((1+rt)*brt_1 + wt - p*grid_r');
+num_r = ((1+rt1).^(-1/sigma.r)).*...
+        (bsxfun(@times,(1+rt1).*zt1,grid_r) + wt1 - zt1.*qt1.*brt1);
+ratio_r = Euler_ratio(s_par,s_state,zt1,num_r,denom_r,'r');
 euler_r = abs(p - ratio_r);
 
 
-denom_f = ((1+rt).^((sigma.f-1)/sigma.f)).*(Qft + bft_1/lambdat - p*grid_f');
-num_f = ((zt1.^(-1/sigma.f)).*((1+rt1).^((sigma.f-1)/sigma.f))).*...
-        ((lambda.*Qf)*ones(1,l_grid_g) + ones(n_states,1)*grid_f - (lambda*ones(1,l_grid_g)).*qt1.*zt1.*bft1);
-ratio_f = Euler_ratio(s_par,s_state,num_f,denom_f,'f');
+denom_f = ((1+rt)*(eft + bft_1) - p*grid_f');
+num_f = ((1+rt1).^(-1/sigma.f)).*...
+        ((1+rt1).*(repmat(e.f,1,l_grid_g) + bsxfun(@times,zt1,grid_f)) - zt1.*qt1.*bft1);
+ratio_f = Euler_ratio(s_par,s_state,zt1,num_f,denom_f,'f');
 euler_f = abs(p - ratio_f);
 
 
-[varargout{1} , b_star] = min(euler_g + euler_r + euler_f);
-
+[fval , b_star] = min(euler_g + euler_r + euler_f);
 Bt = grid_g(b_star);
-
 brt = grid_r(b_star);
-
 bft = grid_f(b_star);
 
-if nargout == 3
-    
-    varargout{1} = Bt;
-    varargout{2} = brt;
-    varargout{3} = bft;
-    
-    return
-    
 end

@@ -1,4 +1,4 @@
-function ratio = Euler_ratio(s_par,s_state,x,y, type)
+function ratio = Euler_ratio(s_par,s_state,zt1,x,y, type)
 
 % Important remark: the 'x' refers to the NUMERATOR while the 'y' refers to
 % the DENOMINATOR. The former is inouted as a 'n_states x length_grid'
@@ -33,7 +33,7 @@ error_c = ((y < 0) + max((x < 0))') > 0;
 %This function corrects the numerator, placing 'Inf' whenever there is a
 %negative consumption on either the numerator or denominator.
 
-fix_num = (1./(ones(n_states,1)*(1 - error_c'))).*abs(x);
+fix_num = (1./(ones(n_states,1)*(1 - error_c'))).*abs(zt1.*x);
 
 %CALCULATING THE NUMERATOR
 %This functions computes the numerator itself, but for the coordinates
