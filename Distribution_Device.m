@@ -63,8 +63,8 @@ s_par = struct('epsilon',epsilon,'beta',beta,'sigma',sigma,...
 
 %Public Bonds
 min_b = 0;                                          %Minimum value for bonds
-max_b = 5;                                         %Maximum value for bonds
-n_bonds = 21;                                       %Quantity of points on the grid for the investors
+max_b = 2;                                         %Maximum value for bonds
+n_bonds = 31;                                       %Quantity of points on the grid for the investors
 
 grid_b_r = linspace(min_b,max_b,n_bonds);            %Grid for resident bonds:
 grid_b_f = grid_b_r;                                 %Grid for foreigner bonds;
@@ -267,27 +267,6 @@ while dist > epsilon && t <= 200
     disp('Prices:')
     disp(q1(1:10))
     
-    %Saving previous values to checkout while debuging ("p" of past)
-    Vop = Vo0;
-    Vdp = Vd0;
-    Vndp = Vnd0;
-    
-    krp = kr0;
-    kfp = kf0;
-    
-    crp = cr0;
-    cfp = cf0;
-    
-    brp = br0;
-    bfp = bf0;
-    
-    bgp = bg0;
-    gp = g0;
-    zp = z0;
-    
-    rp = r0;
-    wp = w0;
-    qp = q0;
     
 end
 
