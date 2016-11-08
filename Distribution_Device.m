@@ -116,7 +116,7 @@ Vnd1 = Vnd;
 br1 = br;
 bf1 = bf;
 
-kr1 = repmat([0;0;0],[1 n_bonds n_bonds]);    %Residents don't have any resources to lend in the very beginning
+kr1 = repmat(zeros(n_states,1),[1 n_bonds n_bonds]);    %Residents don't have any resources to lend in the very beginning
 kf1 = repmat(e.f,[1 n_bonds n_bonds]);        %Foreigners only have their endowments to lend in the very beginning
 
 r1 = r + alpha*((kr1+kf1).^(rho-1)).*((alpha*((kr1+kf1).^rho) + (1-alpha)).^(1/rho-1));
