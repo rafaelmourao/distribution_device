@@ -49,10 +49,10 @@ alpha = .3;                                         %Participation of capital on
 rho = -1;                                           %Elasticity of Substitution between capital and labor is 1/2 (=1/(1-rho))
 
 %Foreigner wealth evolution
-e.f = [.1;.2;.3];
+e.f = [.1;.5];
 
 %Transition Matrix
-prob = [.3 .6 .1;.2 .6 .2;.2 .5 .3];                %Construction od the Probability matrix
+prob = [.4 .6;.2 .8];                %Construction od the Probability matrix
 n_states = size(prob,1);                            %Numbers of States of Nature
 
 s_par = struct('epsilon',epsilon,'beta',beta,'sigma',sigma,...
@@ -63,8 +63,8 @@ s_par = struct('epsilon',epsilon,'beta',beta,'sigma',sigma,...
 
 %Public Bonds
 min_b = 0;                                          %Minimum value for bonds
-max_b = 1;                                         %Maximum value for bonds
-n_bonds = 21;                                       %Quantity of points on the grid for the investors
+max_b = 2;                                         %Maximum value for bonds
+n_bonds = 31;                                       %Quantity of points on the grid for the investors
 
 grid_b_r = linspace(min_b,max_b,n_bonds);            %Grid for resident bonds:
 grid_b_f = grid_b_r;                                 %Grid for foreigner bonds;
@@ -262,8 +262,9 @@ while dist > epsilon && t <= 200
     end
     
     time = toc;
+    dist = max(abs(Vo1(:) - Vo0(:)));
     fprintf('Iter: %d, distance: %.6f, time: %.2f seconds\n',t,dist,time) 
-    disp('Prices in the 1 state:')
+    disp('Prices:')
     disp(q1(1:10))
     
     

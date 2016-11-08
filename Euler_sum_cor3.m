@@ -39,9 +39,9 @@ cft1 = s_gov.cf0(:,:,1);
 
 %% ALGORITHM
 
-denom_g = tc*(crt+cft) - bgt_1 + p*grid_r';
-num_g = ((tc*(crt1+cft1) - repmat(grid_r,n_states,1) +...
-                zt1.*qt1.*bgt1));
+denom_g = tc*(((1+rt)*brt_1 + wt - p*grid_r') + cft) - bgt_1 + p*grid_r';
+num_g = ((tc*((bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1) + cft1) - ...
+    repmat(grid_r,n_states,1) + zt1.*qt1.*bgt1));
 ratio_g = Euler_ratio(s_par,s_state,zt1,num_g,denom_g,'g');
 euler_g = abs(ratio_g - p);
 

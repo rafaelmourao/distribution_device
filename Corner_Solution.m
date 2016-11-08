@@ -66,12 +66,12 @@ num_f_c1 = ((1+rt1_c1).^(-1/sigma.f)).*...
 pf_0_c1 = Euler_ratio(s_par,s_state,zt1_c1,num_f_c1,denom_f_c1,'f');
 
 
-crt1_c1 = crt1(:,1,1);
-cft1_c1 = cft1(:,1,1);
+%crt1_c1 = crt1(:,1,1);
+%cft1_c1 = cft1(:,1,1);
 bgt1_c1 = bgt1(:,1,1);
 
-denom_g_c1 = tc*(crt+cft) - bgt_1;
-num_g_c1 = (tc*(crt1_c1 + cft1_c1) +...
+denom_g_c1 = tc*(((1+rt)*brt_1 + wt) + ((1+rt)*(bft_1 + eft))) - bgt_1;
+num_g_c1 = (tc*((wt1_c1 - zt1_c1.*qt1_c1.*brt1_c1) + (bsxfun(@times,(1+rt1_c1),e.f) - zt1_c1.*qt1_c1.*bft1_c1)) +...
                 zt1_c1.*qt1_c1.*bgt1_c1);
             
 pg_0_c1 = Euler_ratio(s_par,s_state,zt1_c1,num_g_c1,denom_g_c1,'g');
