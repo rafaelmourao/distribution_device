@@ -457,24 +457,35 @@ classdef Economy
             bgt_1 = obj.bg(n, id_br, id_bf);
             rt = obj.r(n, id_br, id_bf);
             wt = obj.w(n, id_br, id_bf);
+<<<<<<< Updated upstream
            
+=======
+<<<<<<< HEAD
+            eft = obj.e.f(n);
+            
+            brt1 = squeeze(obj.br(:,:,1));
+            bft1 = squeeze(obj.bf(:,:,1));
+=======
+           
+>>>>>>> origin/oop
+>>>>>>> Stashed changes
             
             %Government
-            crt = obj.cr(n, id_br, id_bf);
-            cft = obj.cf(n, id_br, id_bf);
+            %crt = obj.cr(n, id_br, id_bf);
+            %cft = obj.cf(n, id_br, id_bf);
             rt1 = obj.r(:,:,1);
             wt1 = obj.w(:,:,1);
             qt1 = obj.q(:,:,1);
             zt1 = obj.z(:,:,1);
             brt1 = obj.br(:,:,1);
             bgt1 = obj.bg(:,:,1);
-            crt1 = obj.cr(:,:,1);
-            cft1 = obj.cf(:,:,1);
+            %crt1 = obj.cr(:,:,1);
+            %cft1 = obj.cf(:,:,1);
             
             %% ALGORITHM
             
-            denom_g = @(p) obj.tc*(((1+rt)*brt_1 + wt - p*grid_r') + cft) - bgt_1 + p*grid_r';
-            num_g = ((obj.tc*((bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1) + cft1) - ...
+            denom_g = @(p) obj.tc*(((1+rt)*brt_1 + wt - p*grid_r') + (1+rt)*(bft_1 + eft)) - bgt_1 + p*grid_r';
+            num_g = ((obj.tc*((bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1) + (bsxfun(@times,(1+rt1),obj.e.f) - zt1.*qt1.*bft1)) - ...
                 repmat(grid_r,obj.n_states,1) + zt1.*qt1.*bgt1));
             ratio_g = @(p) Euler_ratio(obj, n, zt1, num_g, denom_g(p),obj.sigma.g);
             euler_g = @(p) abs(ratio_g(p) - p);
