@@ -71,7 +71,7 @@ iter = Economy(param);
 
 dist = 100;                                         %Distance between previous and current price and bond functions
 t = 1;                                              %Number of interations
-while dist > epsilon && t <= 1
+while dist > epsilon && t <= 200
     tic
     t = t+1;
     

@@ -134,8 +134,8 @@ classdef Economy
             bg_s = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);
             next_Vo = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);
             
-%             parfor(id_br=1:nbonds,nworkers)   %RESIDENTS bonds from previous period
-                for id_br=1:nbonds
+            parfor(id_br=1:nbonds,nworkers)   %RESIDENTS bonds from previous period
+
                 for id_bf = 1:nbonds                    %FOREIGNERS bonds from previous period
                     
                     for n = 1:nstates                          %State of Nature
