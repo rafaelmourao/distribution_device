@@ -137,7 +137,7 @@ classdef Economy
             next_Vo = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);
             
             parfor(id_br=1:nbonds,nworkers)   %RESIDENTS bonds from previous period
-
+                
                 for id_bf = 1:nbonds                    %FOREIGNERS bonds from previous period
                     
                     for n = 1:nstates                          %State of Nature
@@ -156,7 +156,7 @@ classdef Economy
                 
             end
             
-            obj.q = p;                              %Equilibrium price for the Bonds' market
+            obj.q = p;               %Equilibrium price for the Bonds' market
             obj.br = br_s;                          %RESIDENTS demand for Bonds
             obj.bf = bf_s;                          %FOREIGNERS demand for Bonds
             obj.bg = bg_s;                          %GOVERNEMNT supply of Bonds
@@ -268,12 +268,18 @@ classdef Economy
             %THE BOND MARKET MUST BE OPEN FOR THIS CALCULATION DO BE DONE
             %YOU DO NEED 'zt1'
             
-            denom_g = @(p) obj.tc*(((1+rt)*brt_1 + wt - p*grid_r') + ...
+            denom_g = @(p) (obj.tc/(1+obj.tc))*...
+                (((1+rt)*brt_1 + wt - p*grid_r') + ...
                 ((1+rt)*(eft + bft_1) - p*grid_f')) + ...
                 (p*grid_g' - bgt_1);
-            num_g = (obj.tc*((bsxfun(@times,(1+rt1).*zt1,grid_r) + wt1 - zt1.*qt1.*brt1) + ...
-                ((1+rt1).*(repmat(obj.e.f,1,l_grid_g) + bsxfun(@times,zt1,grid_f)) - zt1.*qt1.*bft1)) + ...
-                zt1.*(qt1.*bgt1 - repmat(grid_g,obj.n_states,1)));
+            
+            num_g = (obj.tc/(1+obj.tc))*...
+                ((zt1.*bsxfun(@times,(1+rt1),grid_r) + ...
+                wt1 - zt1.*qt1.*brt1) + ...
+                ((1+rt1).*(repmat(obj.e.f,1,l_grid_g) + ...
+                bsxfun(@times,zt1,grid_f)) - zt1.*qt1.*bft1)) + ...
+                zt1.*(qt1.*bgt1 - repmat(grid_g,obj.n_states,1));
+            
             ratio_g = @(p) Euler_ratio(obj, n, zt1, num_g, denom_g(p),obj.sigma.g);
             euler_g = @(p) abs(ratio_g(p) - p);
             
@@ -285,8 +291,9 @@ classdef Economy
             
             
             denom_f = @(p) ((1+rt)*(eft + bft_1) - p*grid_f');
-            num_f = ((1+rt1).^(-1/obj.sigma.f)).*...
-                ((1+rt1).*(repmat(obj.e.f,1,l_grid_g) + bsxfun(@times,zt1,grid_f)) - zt1.*qt1.*bft1);
+            num_f = (1+rt1).^(-1/obj.sigma.f).*...
+                ((1+rt1).*(repmat(obj.e.f,1,l_grid_g) +...
+                bsxfun(@times,zt1,grid_f)) - zt1.*qt1.*bft1);
             ratio_f = @(p) Euler_ratio(obj, n, zt1,num_f,denom_f(p),obj.sigma.f);
             euler_f = @(p) abs(p - ratio_f(p));
             
@@ -330,7 +337,6 @@ classdef Economy
                 pr, pf, pg);
         end
         
-        
         function [status, p, br, bf, B, pr, pf, pg] = ...
                 Corner_Solution_1(obj, n, id_br, id_bf)
             
@@ -345,6 +351,7 @@ classdef Economy
             zt1 = obj.z(:,1,1);
             brt1 = obj.br(:,1,1);
             bft1 = obj.bf(:,1,1);
+            bgt1 = obj.bg(:,1,1);
             brt_1 = obj.br(n, id_br, id_bf);
             bft_1 = obj.bf(n, id_br, id_bf);
             bgt_1 = obj.bg(n, id_br, id_bf);
@@ -364,11 +371,12 @@ classdef Economy
             
             pf = Euler_ratio(obj,n,zt1,num_f,denom_f,obj.sigma.f);
             
-            bgt1 = obj.bg(:,1,1);
+            denom_g = (obj.tc/(1+obj.tc))*(((1+rt)*brt_1 + wt) +...
+                ((1+rt)*(bft_1 + eft))) - bgt_1;
             
-            denom_g = obj.tc*(((1+rt)*brt_1 + wt) + ((1+rt)*(bft_1 + eft))) - bgt_1;
-            num_g = (obj.tc*((wt1 - zt1.*qt1.*brt1) + (bsxfun(@times,(1+rt1),obj.e.f) - zt1.*qt1.*bft1)) +...
-                zt1.*qt1.*bgt1);
+            num_g = (obj.tc/(1+obj.tc))*((wt1 - zt1.*qt1.*brt1) +...
+                (bsxfun(@times,(1+rt1),obj.e.f) - zt1.*qt1.*bft1)) +...
+                zt1.*qt1.*bgt1;
             
             pg = Euler_ratio(obj, n, zt1, num_g, denom_g,obj.sigma.g);
             
@@ -382,7 +390,7 @@ classdef Economy
             
             epsilon = .1;
             br = 0;
-                       
+            
             grid_f = obj.grid.b_f;
             l_grid_f = length(grid_f);
             
@@ -405,16 +413,21 @@ classdef Economy
             
             % Euler equations
             
-            denom_g = @(p) obj.tc*(crt + ((1+rt)*(eft + bft_1) - p*grid_f')) - bgt_1 + p*grid_f';
-            num_g = (obj.tc*(crt1 + ((1+rt1).*(repmat(obj.e.f,1,l_grid_f) +...
-                repmat(grid_f,obj.n_states,1)) - zt1.*qt1.*bft1)) - ...
-                repmat(grid_f,obj.n_states,1) + qt1.*zt1.*bgt1);
+            denom_g = @(p) obj.tc*crt + ...
+                (obj.tc/(1+obj.tc))*((1+rt)*(eft + bft_1) - p*grid_f') -...
+                bgt_1 + p*grid_f';
+            num_g = obj.tc*crt1 +...
+                (obj.tc/(1+obj.tc))*((1+rt1).*(repmat(obj.e.f,1,l_grid_f) +...
+                repmat(grid_f,obj.n_states,1)) - zt1.*qt1.*bft1) - ...
+                repmat(grid_f,obj.n_states,1) + qt1.*zt1.*bgt1;
             ratio_g = @(p) Euler_ratio(obj,n,zt1,num_g,denom_g(p),obj.sigma.g);
             euler_g = @(p) abs(ratio_g(p) - p);
             
-            denom_f = @(p) ((1+rt).^(-1/obj.sigma.f)).*((1+rt)*(eft + bft_1) - p*grid_f');
+            denom_f = @(p) ((1+rt).^(-1/obj.sigma.f)).*...
+                ((1+rt)*(eft + bft_1) - p*grid_f');
             num_f = ((1+rt1).^(-1/obj.sigma.f)).*...
-                ((1+rt1).*(repmat(obj.e.f,1,l_grid_f) + repmat(grid_f,obj.n_states,1)) - zt1.*qt1.*bft1);
+                ((1+rt1).*(repmat(obj.e.f,1,l_grid_f) +...
+                repmat(grid_f,obj.n_states,1)) - zt1.*qt1.*bft1);
             ratio_f = @(p) Euler_ratio(obj,n,zt1,num_f,denom_f(p),obj.sigma.f);
             euler_f = @(p) abs(p - ratio_f(p));
             
@@ -457,10 +470,9 @@ classdef Economy
             bgt_1 = obj.bg(n, id_br, id_bf);
             rt = obj.r(n, id_br, id_bf);
             wt = obj.w(n, id_br, id_bf);
-           
+            
             
             %Government
-            crt = obj.cr(n, id_br, id_bf);
             cft = obj.cf(n, id_br, id_bf);
             rt1 = obj.r(:,:,1);
             wt1 = obj.w(:,:,1);
@@ -468,20 +480,22 @@ classdef Economy
             zt1 = obj.z(:,:,1);
             brt1 = obj.br(:,:,1);
             bgt1 = obj.bg(:,:,1);
-            crt1 = obj.cr(:,:,1);
             cft1 = obj.cf(:,:,1);
             
             %% ALGORITHM
             
-            denom_g = @(p) obj.tc*(((1+rt)*brt_1 + wt - p*grid_r') + cft) - bgt_1 + p*grid_r';
-            num_g = ((obj.tc*((bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1) + cft1) - ...
-                repmat(grid_r,obj.n_states,1) + zt1.*qt1.*bgt1));
+            denom_g = @(p) (obj.tc/(1+obj.tc))*...
+                ((1+rt)*brt_1 + wt - p*grid_r') + obj.tc*cft -...
+                bgt_1 + p*grid_r';
+            num_g = obj.tc*cft1 + (obj.tc/(1+obj.tc))*...
+                (bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1) - ...
+                repmat(grid_r,obj.n_states,1) + zt1.*qt1.*bgt1;
             ratio_g = @(p) Euler_ratio(obj, n, zt1, num_g, denom_g(p),obj.sigma.g);
             euler_g = @(p) abs(ratio_g(p) - p);
             
             
-            denom_r = @(p) ((1+rt)*brt_1 + wt - p*grid_r');
-            num_r = ((1+rt1).^(-1/obj.sigma.r)).*...
+            denom_r = @(p) (1+rt)*brt_1 + wt - p*grid_r';
+            num_r = (1+rt1).^(-1/obj.sigma.r).*...
                 (bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1);
             ratio_r = @(p) Euler_ratio(obj,n,zt1,num_r,denom_r(p),obj.sigma.r);
             euler_r = @(p) abs(p - ratio_r(p));
@@ -501,7 +515,7 @@ classdef Economy
             bft1_c3 = obj.bf(:,b_star,1);
             
             denom_f_c3 = (1+rt)*(obj.e.f(n) + bft_1);
-            num_f_c3 = ((1+rt1_c3).^(-1/obj.sigma.f)).*...
+            num_f_c3 = (1+rt1_c3).^(-1/obj.sigma.f).*...
                 (bsxfun(@times,(1+rt1_c3),obj.e.f) - zt1_c3.*qt1_c3.*bft1_c3);
             
             pf_0_c3 = Euler_ratio(obj, n, zt1_c3, num_f_c3, denom_f_c3, obj.sigma.f);
@@ -577,7 +591,7 @@ classdef Economy
             %whole column will be shut down.
             
             error_c = (y < 0) | any(x < 0)';
-                                              
+            
             numerator = obj.beta*(probt*((zt1.*x).^(-sig)))';
             
             denominator = y.^(-sig);
