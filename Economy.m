@@ -438,14 +438,7 @@ classdef Economy
             
             pr_0_c2 = Euler_ratio(obj, n, zt1_c2, num_r_c2, denom_r_c2,obj.sigma.r);
             
-            if sum_euler > epsilon || pr_0_c2 > p
-                
-                status = 0;
-                p = 0;
-                B = 1e-10;
-                bf = 1e-10;
-                
-            end
+            status = (sum_euler < epsilon & pr_0_c2 <= p);
             
         end
         
@@ -453,7 +446,6 @@ classdef Economy
             %This is the case where the FOREIGN investor chooses zero bonds:'bf = 0'
             
             bf = 0;
-            status = 1;
             p_max = 10;
             epsilon = .1;
             
@@ -515,12 +507,7 @@ classdef Economy
             
             pf_0_c3 = Euler_ratio(obj, n, zt1_c3, num_f_c3, denom_f_c3, obj.sigma.f);
             
-            if sum_euler > epsilon || pf_0_c3 > p
-                status = 0;
-                p = 0;
-                B = 1e-10;
-                br = 0;
-            end
+            status = (sum_euler < epsilon && pf_0_c3 < p)
             
             
         end

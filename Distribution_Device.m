@@ -76,7 +76,7 @@ while dist > epsilon && t <= 200
     t = t+1;
     
     old_iter = iter;
-    iter = iter.update(1);
+    iter = iter.update(12);
 
     time = toc;
     dist = max(abs(iter.Vo(:) - old_iter.Vo(:)));
