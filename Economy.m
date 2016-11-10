@@ -457,8 +457,7 @@ classdef Economy
             bgt_1 = obj.bg(n, id_br, id_bf);
             rt = obj.r(n, id_br, id_bf);
             wt = obj.w(n, id_br, id_bf);
-            
-            brt1 = squeeze(obj.br(:,1,:));
+           
             
             %Government
             crt = obj.cr(n, id_br, id_bf);
@@ -467,6 +466,7 @@ classdef Economy
             wt1 = obj.w(:,:,1);
             qt1 = obj.q(:,:,1);
             zt1 = obj.z(:,:,1);
+            brt1 = obj.br(:,:,1);
             bgt1 = obj.bg(:,:,1);
             crt1 = obj.cr(:,:,1);
             cft1 = obj.cf(:,:,1);
