@@ -29,6 +29,7 @@
 %% PARAMETERS
 
 epsilon = 1e-3;                                     %Tolerance level
+param.p_max = 20;
 
 %Consumers
 param.beta = .95;                                         %Intertemporal discount rate
@@ -56,8 +57,8 @@ param.n_states = size(param.prob,1);                            %Numbers of Stat
 
 %Public Bonds
 min_b = 0;                                          %Minimum value for bonds
-max_b = 2;                                         %Maximum value for bonds
-param.n_bonds = 21;                                       %Quantity of points on the grid for the investors
+max_b = 1;                                         %Maximum value for bonds
+param.n_bonds = 31;                                       %Quantity of points on the grid for the investors
 
 param.grid.b_r = linspace(min_b,max_b,param.n_bonds);            %Grid for resident bonds:
 param.grid.b_f = param.grid.b_r;                                 %Grid for foreigner bonds;
@@ -71,19 +72,19 @@ iter = Economy(param);
 
 dist = 100;                                         %Distance between previous and current price and bond functions
 t = 1;                                              %Number of interations
-while dist > epsilon && t <= 200
+while dist > epsilon && t <= 500
     tic
     t = t+1;
     
     old_iter = iter;
-    iter = iter.update(12);
+    iter = iter.update(16);
 
     time = toc;
     dist = max(abs(iter.Vo(:) - old_iter.Vo(:)));
     fprintf('Iter: %d, distance: %.6f, time: %.2f seconds\n',t,dist,time) 
     disp('Prices:')
     disp(iter.q(1:10))
-    
+    fprintf('Default proportion: %.4f\n',1-mean(iter.z(:))) 
 end
 
 toc

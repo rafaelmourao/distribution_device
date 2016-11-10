@@ -14,6 +14,7 @@ classdef Economy
         grid % structure that defines the grid of bonds
         n_bonds
         default
+        p_max
         
         % iteraction variables
         Vd
@@ -42,6 +43,7 @@ classdef Economy
         
         function obj = Economy(param)
             % Setting parameters
+            obj.p_max = param.p_max;
             obj.beta = param.beta;
             obj.sigma = param.sigma;
             obj.phi = param.phi;
@@ -83,9 +85,9 @@ classdef Economy
             obj.bf = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);          %BONDS policy funtion for FOREIGNERS
             
             %Government
-            obj.bg = 1e-10*ones(obj.n_states,obj.n_bonds,obj.n_bonds);     %BONDS policy funtion for the GOVERNMENT
-            obj.g = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);           %PUBLIC EXPENDITURE policy funtion for the GOVERNMENT
-            obj.z = ones(obj.n_states,obj.n_bonds,obj.n_bonds);            %DEFAULT policy funtion for the GOVERNMENT
+            obj.bg = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);     %     %BONDS policy funtion for the GOVERNMENT
+            obj.g = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);            %PUBLIC EXPENDITURE policy funtion for the GOVERNMENT
+            obj.z = (rand(obj.n_states,obj.n_bonds,obj.n_bonds) >.5);       %DEFAULT policy funtion for the GOVERNMENT
             
             %% PRICE FUNCTIONS
             
@@ -207,7 +209,7 @@ classdef Economy
             
             [status_int, p_int, br_int, bf_int, bg_int] = Interior_Solution(obj, n, id_br, id_bf);
             
-            if ~status_int
+            if (~status_int)
                 
                 [status_cor, p_cor, br_cor, bf_cor, bg_cor] = Corner_Solution(obj, n, id_br, id_bf);
                 
@@ -231,15 +233,17 @@ classdef Economy
             % Parameters
             
             epsilon = .1;
-            p_max = 10;
             
             % VARIABLES NEEDED
             
             %Grid
+            
             grid_r = obj.grid.r_aux;
             grid_f = obj.grid.f_aux;
             grid_g = obj.grid.b_g;
             l_grid_g = length(grid_g);
+            
+            % Past and present
             
             brt_1 = obj.br(n, id_br, id_bf);
             bft_1 = obj.bf(n, id_br, id_bf);
@@ -247,9 +251,10 @@ classdef Economy
             rt = obj.r(n, id_br, id_bf);
             wt = obj.w(n, id_br, id_bf);
             eft = obj.e.f(n);
-            %Government
+            
+            % Future
+            
             bgt1 = obj.bg(:,:);
-            %Investors
             rt1 = obj.r(:,:);
             wt1 = obj.w(:,:);
             qt1 = obj.q(:,:);
@@ -287,7 +292,7 @@ classdef Economy
             
             f = @(p) min(euler_g(p) + euler_r(p) + euler_f(p));
             
-            [p, sum_euler] = fminbnd(f,0,p_max);
+            [p, sum_euler] = fminbnd(f,0,obj.p_max);
             
             [~, b_star] = f(p);
             
@@ -305,19 +310,19 @@ classdef Economy
             [status, p, br, bf, B, pr, pf, pg] = ...
                 Corner_Solution_1(obj, n, id_br, id_bf);
             
-            if status
+            if (status)
                 return
             end
             
             [status, p, br, bf, B] = Corner_Solution_2(obj, n, id_br, id_bf);
             
-            if status
+            if (status)
                 return
             end
             
             [status, p, br, bf, B] = Corner_Solution_3(obj, n, id_br, id_bf);
             
-            if status
+            if (status)
                 return
             end
             
@@ -331,7 +336,9 @@ classdef Economy
             
             B = 0;
             br = 0;
-            bf = 1e-10;
+            bf = 0;
+            
+            % Future
             rt1 = obj.r(:,1,1);
             wt1 = obj.w(:,1,1);
             qt1 = obj.q(:,1,1);
@@ -375,15 +382,11 @@ classdef Economy
             
             epsilon = .1;
             br = 0;
-            p_max = 10;
-            
-            %variables for optimization
-            
+                       
             grid_f = obj.grid.b_f;
             l_grid_f = length(grid_f);
             
-            % State
-            
+            % Past and current
             bgt_1 = obj.bg(n, id_br, id_bf);
             bft_1 = obj.bf(n, id_br, id_bf);
             brt_1 = obj.br(n, id_br, id_bf);
@@ -391,11 +394,8 @@ classdef Economy
             wt = obj.w(n, id_br, id_bf);
             eft = obj.e.f(n);
             
-            % Investors
-            
+            % Future
             bft1 = squeeze(obj.bf(:,1,:));
-            % Government
-            
             crt = obj.cr(n, id_br, id_bf);
             rt1 = squeeze(obj.r(:,1,:));
             qt1 = squeeze(obj.q(:,1,:));
@@ -421,7 +421,7 @@ classdef Economy
             % objective function
             f = @(p) min(euler_g(p) + euler_f(p));
             
-            [p, sum_euler] = fminbnd(f,0,p_max);
+            [p, sum_euler] = fminbnd(f,0,obj.p_max);
             [~, b_star] = f(p);
             B = grid_f(b_star);
             bf = grid_f(b_star);
@@ -446,14 +446,13 @@ classdef Economy
             %This is the case where the FOREIGN investor chooses zero bonds:'bf = 0'
             
             bf = 0;
-            p_max = 10;
             epsilon = .1;
             
             %Grid
             grid_r = obj.grid.b_r;
             
             %State
-            bft_1 = obj.br(n, id_br, id_bf);
+            bft_1 = obj.bf(n, id_br, id_bf);
             brt_1 = obj.br(n, id_br, id_bf);
             bgt_1 = obj.bg(n, id_br, id_bf);
             rt = obj.r(n, id_br, id_bf);
@@ -489,7 +488,7 @@ classdef Economy
             
             f = @(p) min(euler_g(p) + euler_r(p));
             
-            [p, sum_euler] = fminbnd(f,0,p_max);
+            [p, sum_euler] = fminbnd(f,0,obj.p_max);
             
             [~, b_star] = f(p);
             
@@ -507,13 +506,13 @@ classdef Economy
             
             pf_0_c3 = Euler_ratio(obj, n, zt1_c3, num_f_c3, denom_f_c3, obj.sigma.f);
             
-            status = (sum_euler < epsilon && pf_0_c3 < p)
+            status = (sum_euler < epsilon && pf_0_c3 < p);
             
             
         end
         
         function [status, p, br, bf, B] = ...
-                Corner_Solution_others(obj, pr_c1, pf_c1, pg_c1 )
+                Corner_Solution_others(~, pr_c1, pf_c1, pg_c1 )
             
             %CASE 4: B = 0 and br = 0
             B = 0;
@@ -578,22 +577,8 @@ classdef Economy
             %whole column will be shut down.
             
             error_c = (y < 0) | any(x < 0)';
-                                  
-            %CALCULATING THE NUMERATOR
-            %This functions computes the numerator itself, but for the coordinates
-            %where there was negative consumption for either numerator or denominator,
-            %there will be '0' instead.
-            
+                                              
             numerator = obj.beta*(probt*((zt1.*x).^(-sig)))';
-            
-            %FIX DENOMINATOR FUNTION
-            %This function corrects the denominator, placing 'Inf' whenever there is
-            %a negative consumption on either the numerator or denominator.
-                        
-            %CALCULATING THE DENOMINATOR
-            %This functions computes the denomitor itself, but for the coordinates
-            %where there was negative consumption for either numerator or denominator,
-            %there will be '0' instead.
             
             denominator = y.^(-sig);
             
