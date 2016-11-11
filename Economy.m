@@ -56,6 +56,8 @@ classdef Economy
             obj.n_states = param.n_states;
             obj.n_bonds = param.n_bonds;
             
+            % Constructing grid
+            
             if isfield(param,'grid') % if grid is supplied
                 obj.grid = param.grid;
             else
@@ -65,8 +67,6 @@ classdef Economy
                 obj.grid.f_aux = kron(obj.grid.b_f,ones(1,obj.n_bonds));
                 obj.grid.b_g = obj.grid.r_aux + obj.grid.f_aux;
             end
-            
-            
             
             % Generating auxiliary grid
             
@@ -97,7 +97,7 @@ classdef Economy
             %Government
             obj.bg = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);     %     %BONDS policy funtion for the GOVERNMENT
             obj.g = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);            %PUBLIC EXPENDITURE policy funtion for the GOVERNMENT
-            obj.z = (rand(obj.n_states,obj.n_bonds,obj.n_bonds) >.5);       %DEFAULT policy funtion for the GOVERNMENT
+            obj.z = (rand(obj.n_states,obj.n_bonds,obj.n_bonds) >.1);       %DEFAULT policy funtion for the GOVERNMENT
             
             %% PRICE FUNCTIONS
             
@@ -137,32 +137,27 @@ classdef Economy
                 nworkers = 12;
             end
             
-            nbonds = obj.n_bonds;
-            nstates = obj.n_states;
+            n_b_states = obj.n_states*obj.n_bonds^2;
+            n_b_states_size = [obj.n_states, obj.n_bonds, obj.n_bonds];
             
-            p = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);
-            br_s = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);
-            bf_s = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);
-            bg_s = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);
-            next_Vo = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);
+            p = zeros(n_b_states_size);
+            br_s = zeros(n_b_states_size);
+            bf_s = zeros(n_b_states_size);
+            bg_s = zeros(n_b_states_size);
+            next_Vo = zeros(n_b_states_size);
             
-            parfor(id_br=1:nbonds,nworkers)   %RESIDENTS bonds from previous period
+            
+            parfor(i=1:n_b_states,nworkers)   %RESIDENTS bonds from previous period
                 
-                for id_bf = 1:nbonds                    %FOREIGNERS bonds from previous period
-                    
-                    for n = 1:nstates                          %State of Nature
-                        
-                        [p(n,id_br,id_bf), br_s(n,id_br,id_bf),...
-                            bf_s(n,id_br,id_bf), bg_s(n,id_br,id_bf)] = ...
-                            Solution(obj, n, id_br, id_bf);
-                        
-                        loc_br_s = ( obj.grid.b_r == br_s(n,id_br,id_bf) );
-                        loc_bf_s = ( obj.grid.b_f == bf_s(n,id_br,id_bf) );
-                        next_Vo(n,id_br,id_bf) = obj.Vo(n,loc_br_s,loc_bf_s);
-                        
-                    end
-                    
-                end
+                [n, id_br, id_bf] = ind2sub(n_b_states_size,i)
+                
+                [p(i), br_s(i),...
+                    bf_s(i), bg_s(i)] = ...
+                    Solution(obj, n, id_br, id_bf);
+                
+                loc_br_s = ( obj.grid.b_r == br_s(i) );
+                loc_bf_s = ( obj.grid.b_f == bf_s(i) );
+                next_Vo(i) = obj.Vo(n,loc_br_s,loc_bf_s);
                 
             end
             
@@ -619,7 +614,7 @@ classdef Economy
             
             error_c = (y < 0) | any(x < 0)';
             
-            numerator = obj.beta*(probt*((zt1.*x).^(-sig)))';
+            numerator = obj.beta*(probt*(zt1.*(x.^-sig)))';
             
             denominator = y.^(-sig);
             

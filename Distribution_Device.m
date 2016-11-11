@@ -28,7 +28,8 @@
 
 %% ECONOMY PARAMETERS
 
-param.p_max = 20;
+param = [];
+param.p_max = 10;
 %Consumers
 param.beta = .95;                                         %Intertemporal discount rate
 param.sigma.r = 2;                                        %Utility function parameter: risk aversion
@@ -45,18 +46,18 @@ param.alpha = .3;                                         %Participation of capi
 param.rho = -1;                                           %Elasticity of Substitution between capital and labor is 1/2 (=1/(1-rho))
 
 %Foreigner wealth evolution
-param.e.f = [.1;.2;.3];
+param.e.f = [.1;.3; .5];
 
 %Transition Matrix
-param.prob = [.3 .6 .1;.2 .6 .2;.2 .5 .3];                %Construction od the Probability matrix
+param.prob = [.3 .6 .1;.2 .6 .2;.1 .6 .3];                %Construction od the Probability matrix
 param.n_states = size(param.prob,1);                            %Numbers of States of Nature
 
 % GRID
 
 %Public Bonds
 param.min_b = 0;                                          %Minimum value for bonds
-param.max_b = 1;                                         %Maximum value for bonds
-param.n_bonds = 20;                                       %Quantity of points on the grid for the investors
+param.max_b = .5;                                         %Maximum value for bonds
+param.n_bonds = 5;                                       %Quantity of points on the grid for the investors
 
 %%
 
@@ -66,12 +67,12 @@ epsilon = 1e-3;                                     %Tolerance level
 dist = 100;                                         %Distance between previous and current price and bond functions
 t = 1;                                              %Number of interations
 
-while dist > epsilon && t <= 500
+while dist > epsilon && t <= 10000
     tic
     t = t+1;
     
     old_iter = iter;
-    iter = iter.update(16);
+    iter = iter.update(20);
 
     time = toc;
     dist = max(abs(iter.Vo(:) - old_iter.Vo(:)));
