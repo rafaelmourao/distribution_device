@@ -299,7 +299,7 @@ classdef Economy
             
             denom_r = @(p) ((1+rt)*brt_1 + wt - p*grid_r');
             num_r = ((1+rt1).^(-1/obj.sigma.r)).*...
-                (bsxfun(@times,(1+rt1).*zt1,grid_r) + wt1 - zt1.*qt1.*brt1);
+                 (zt1.*bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1);
             ratio_r = @(p) Euler_ratio(obj, n, zt1, num_r, denom_r(p),obj.sigma.r);
             euler_r = @(p) abs(p - ratio_r(p));
             
@@ -418,30 +418,30 @@ classdef Economy
             
             % Future
             bft1 = squeeze(obj.bf(:,1,:));
-            crt = obj.cr(n, id_br, id_bf);
+            %crt = obj.cr(n, id_br, id_bf);
             rt1 = squeeze(obj.r(:,1,:));
+            wt1 = squeeze(obj.w(:,1,:));
             qt1 = squeeze(obj.q(:,1,:));
             zt1 = squeeze(obj.z(:,1,:));
             bgt1 = squeeze(obj.bg(:,1,:));
-            crt1 = squeeze(obj.cr(:,1,:));
+            %crt1 = squeeze(obj.cr(:,1,:));
             
             % Euler equations
             
-            denom_g = @(p) obj.tc*crt + ...
+            denom_g = @(p) (obj.tc/(1+obj.tc))*((1+rt)*brt_1 + wt) + ... %Resident consumption when br=0
                 (obj.tc/(1+obj.tc))*((1+rt)*(eft + bft_1) - p*grid_f') -...
                 bgt_1 + p*grid_f';
-            num_g = obj.tc*crt1 +...
+            num_g = (obj.tc/(1+obj.tc))*(wt1 - zt1.*qt1.*brt1) +... %Resident consumption when br=0
                 (obj.tc/(1+obj.tc))*((1+rt1).*(repmat(obj.e.f,1,l_grid_f) +...
                 repmat(grid_f,obj.n_states,1)) - zt1.*qt1.*bft1) - ...
-                repmat(grid_f,obj.n_states,1) + qt1.*zt1.*bgt1;
+                bsxfun(@times,zt1,grid_f) + qt1.*zt1.*bgt1;
             ratio_g = @(p) Euler_ratio(obj,n,zt1,num_g,denom_g(p),obj.sigma.g);
             euler_g = @(p) abs(ratio_g(p) - p);
             
-            denom_f = @(p) ((1+rt).^(-1/obj.sigma.f)).*...
-                ((1+rt)*(eft + bft_1) - p*grid_f');
+            denom_f = @(p) (1+rt)*(eft + bft_1) - p*grid_f';
             num_f = ((1+rt1).^(-1/obj.sigma.f)).*...
                 ((1+rt1).*(repmat(obj.e.f,1,l_grid_f) +...
-                repmat(grid_f,obj.n_states,1)) - zt1.*qt1.*bft1);
+                bsxfun(@times,zt1,grid_f) - zt1.*qt1.*bft1));
             ratio_f = @(p) Euler_ratio(obj,n,zt1,num_f,denom_f(p),obj.sigma.f);
             euler_f = @(p) abs(p - ratio_f(p));
             
@@ -487,30 +487,32 @@ classdef Economy
             
             
             %Government
-            cft = obj.cf(n, id_br, id_bf);
+            %cft = obj.cf(n, id_br, id_bf);
             rt1 = obj.r(:,:,1);
             wt1 = obj.w(:,:,1);
             qt1 = obj.q(:,:,1);
             zt1 = obj.z(:,:,1);
             brt1 = obj.br(:,:,1);
             bgt1 = obj.bg(:,:,1);
-            cft1 = obj.cf(:,:,1);
+            %cft1 = obj.cf(:,:,1);
             
             %% ALGORITHM
             
             denom_g = @(p) (obj.tc/(1+obj.tc))*...
-                ((1+rt)*brt_1 + wt - p*grid_r') + obj.tc*cft -...
+                ((1+rt)*brt_1 + wt - p*grid_r') +...
+                (obj.tc/(1+obj.tc))*(1+rt)*(bft_1 + eft) -... Foreigner consumption when bf=0
                 bgt_1 + p*grid_r';
-            num_g = obj.tc*cft1 + (obj.tc/(1+obj.tc))*...
-                (bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1) - ...
-                repmat(grid_r,obj.n_states,1) + zt1.*qt1.*bgt1;
+            num_g = (obj.tc/(1+obj.tc))*...
+                (bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1) + ...
+                (obj.tc/(1+obj.tc))*(bsxfun(@times,(1+rt1),obj.e.f) - zt1.*qt1.*bft1) - ... Foreigner consumption when bf=0 
+                bsxfun(@times,zt1,grid_r) + zt1.*qt1.*bgt1;
             ratio_g = @(p) Euler_ratio(obj, n, zt1, num_g, denom_g(p),obj.sigma.g);
             euler_g = @(p) abs(ratio_g(p) - p);
             
             
             denom_r = @(p) (1+rt)*brt_1 + wt - p*grid_r';
             num_r = (1+rt1).^(-1/obj.sigma.r).*...
-                (bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1);
+                (zt1.*bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1);
             ratio_r = @(p) Euler_ratio(obj,n,zt1,num_r,denom_r(p),obj.sigma.r);
             euler_r = @(p) abs(p - ratio_r(p));
             
