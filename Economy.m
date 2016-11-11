@@ -59,11 +59,11 @@ classdef Economy
             if isfield(param,'grid') % if grid is supplied
                 obj.grid = param.grid;
             else
-                obj.grid.b_r = linspace(param.min_b,param.max_b,param.n_bonds);            %Grid for resident bonds:
-                obj.grid.b_f = param.grid.b_r;                                 %Grid for foreigner bonds;
-                obj.grid.r_aux = repmat(param.grid.b_r,1,param.n_bonds);             %Combinations of bonds
-                obj.grid.f_aux = kron(param.grid.b_f,ones(1,param.n_bonds));
-                obj.grid.b_g = param.grid.r_aux + param.grid.f_aux;
+                obj.grid.b_r = linspace(param.min_b,param.max_b,obj.n_bonds);            %Grid for resident bonds:
+                obj.grid.b_f = obj.grid.b_r;                                 %Grid for foreigner bonds;
+                obj.grid.r_aux = repmat(obj.grid.b_r,1,obj.n_bonds);             %Combinations of bonds
+                obj.grid.f_aux = kron(obj.grid.b_f,ones(1,obj.n_bonds));
+                obj.grid.b_g = obj.grid.r_aux + obj.grid.f_aux;
             end
             
             
