@@ -55,14 +55,24 @@ classdef Economy
             obj.prob = param.prob;
             obj.n_states = param.n_states;
             obj.n_bonds = param.n_bonds;
-            obj.grid = param.grid;
+            
+            if isfield(param,'grid') % if grid is supplied
+                obj.grid = param.grid;
+            else
+                obj.grid.b_r = linspace(param.min_b,param.max_b,param.n_bonds);            %Grid for resident bonds:
+                obj.grid.b_f = param.grid.b_r;                                 %Grid for foreigner bonds;
+                obj.grid.r_aux = repmat(param.grid.b_r,1,param.n_bonds);             %Combinations of bonds
+                obj.grid.f_aux = kron(param.grid.b_f,ones(1,param.n_bonds));
+                obj.grid.b_g = param.grid.r_aux + param.grid.f_aux;
+            end
+            
+            
             
             % Generating auxiliary grid
             
             obj.extended_grid.b_r = repmat(obj.grid.b_r,obj.n_states,1,obj.n_bonds);
             obj.extended_grid.b_f = repmat(reshape(obj.grid.b_f,1,1,obj.n_bonds),...
                 obj.n_states,obj.n_bonds);
-            
             obj.extended_grid.e_f = repmat(obj.e.f,1,obj.n_bonds,obj.n_bonds);
             
             % Value functions
@@ -299,7 +309,7 @@ classdef Economy
             
             denom_r = @(p) ((1+rt)*brt_1 + wt - p*grid_r');
             num_r = ((1+rt1).^(-1/obj.sigma.r)).*...
-                 (zt1.*bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1);
+                (zt1.*bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1);
             ratio_r = @(p) Euler_ratio(obj, n, zt1, num_r, denom_r(p),obj.sigma.r);
             euler_r = @(p) abs(p - ratio_r(p));
             
@@ -423,6 +433,7 @@ classdef Economy
             wt1 = squeeze(obj.w(:,1,:));
             qt1 = squeeze(obj.q(:,1,:));
             zt1 = squeeze(obj.z(:,1,:));
+            brt1 = squeeze(obj.br(:,1,:));
             bgt1 = squeeze(obj.bg(:,1,:));
             %crt1 = squeeze(obj.cr(:,1,:));
             
@@ -476,6 +487,7 @@ classdef Economy
             epsilon = .1;
             
             %Grid
+            eft = obj.e.f(n);
             grid_r = obj.grid.b_r;
             
             %State
@@ -487,14 +499,13 @@ classdef Economy
             
             
             %Government
-            %cft = obj.cf(n, id_br, id_bf);
             rt1 = obj.r(:,:,1);
             wt1 = obj.w(:,:,1);
             qt1 = obj.q(:,:,1);
             zt1 = obj.z(:,:,1);
             brt1 = obj.br(:,:,1);
+            bft1 = obj.bf(:,:,1);
             bgt1 = obj.bg(:,:,1);
-            %cft1 = obj.cf(:,:,1);
             
             %% ALGORITHM
             
@@ -504,7 +515,7 @@ classdef Economy
                 bgt_1 + p*grid_r';
             num_g = (obj.tc/(1+obj.tc))*...
                 (bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1) + ...
-                (obj.tc/(1+obj.tc))*(bsxfun(@times,(1+rt1),obj.e.f) - zt1.*qt1.*bft1) - ... Foreigner consumption when bf=0 
+                (obj.tc/(1+obj.tc))*(bsxfun(@times,(1+rt1),obj.e.f) - zt1.*qt1.*bft1) - ... Foreigner consumption when bf=0
                 bsxfun(@times,zt1,grid_r) + zt1.*qt1.*bgt1;
             ratio_g = @(p) Euler_ratio(obj, n, zt1, num_g, denom_g(p),obj.sigma.g);
             euler_g = @(p) abs(ratio_g(p) - p);

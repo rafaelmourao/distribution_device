@@ -26,11 +26,9 @@
 %BOND'S MARKET WILL BE CONSIDERED CLEARED FOR ALL THE
 %STATES
 
-%% PARAMETERS
+%% ECONOMY PARAMETERS
 
-epsilon = 1e-3;                                     %Tolerance level
 param.p_max = 20;
-
 %Consumers
 param.beta = .95;                                         %Intertemporal discount rate
 param.sigma.r = 2;                                        %Utility function parameter: risk aversion
@@ -53,25 +51,21 @@ param.e.f = [.1;.2;.3];
 param.prob = [.3 .6 .1;.2 .6 .2;.2 .5 .3];                %Construction od the Probability matrix
 param.n_states = size(param.prob,1);                            %Numbers of States of Nature
 
-%% GRID
+% GRID
 
 %Public Bonds
-min_b = 0;                                          %Minimum value for bonds
-max_b = 1;                                         %Maximum value for bonds
-param.n_bonds = 31;                                       %Quantity of points on the grid for the investors
+param.min_b = 0;                                          %Minimum value for bonds
+param.max_b = 1;                                         %Maximum value for bonds
+param.n_bonds = 20;                                       %Quantity of points on the grid for the investors
 
-param.grid.b_r = linspace(min_b,max_b,param.n_bonds);            %Grid for resident bonds:
-param.grid.b_f = param.grid.b_r;                                 %Grid for foreigner bonds;
-param.grid.r_aux = repmat(param.grid.b_r,1,param.n_bonds);             %Combinations of bonds
-param.grid.f_aux = kron(param.grid.b_f,ones(1,param.n_bonds));
-param.grid.b_g = param.grid.r_aux + param.grid.f_aux;
-param.n_bonds_g = length(param.grid.b_g);                       %Number of combination of bonds
-
+%%
 
 iter = Economy(param);
 
+epsilon = 1e-3;                                     %Tolerance level
 dist = 100;                                         %Distance between previous and current price and bond functions
 t = 1;                                              %Number of interations
+
 while dist > epsilon && t <= 500
     tic
     t = t+1;
