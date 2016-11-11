@@ -202,7 +202,7 @@ classdef Economy
             obj.Vo = obj.Vnd;
             
             % check where there is default
-            def = (obj.Vnd < extended_Vd);
+            def = bsxfun(@lt,obj.Vnd,obj.Vd);
             [def_states, ~] = find(def); % retrieving the states of all default occ.
             obj.z(def) = 0;
             obj.Vo(def) = obj.Vd(def_states);
