@@ -176,12 +176,15 @@ classdef Economy
             
             obj.cr = (1/(1+obj.tc))*((1+obj.r).*obj.kr...
                 + obj.w - obj.q.*obj.br);
+            obj.cr(obj.cr<0) = 0;
             
             obj.cf = (1/(1+obj.tc))*((1+obj.r).*obj.kf...
                 - obj.q.*obj.bf);
+            obj.cf(obj.cf<0) = 0;
             
             obj.g = obj.tc*(obj.cr + obj.cf) + obj.q.*obj.bg - ...
                 (obj.extended_grid.b_r + obj.extended_grid.b_f);
+            obj.g(obj.g<0) = 0;
             
             obj.Wnd = Utility_Function(obj.cr,obj.sigma.r) + ...
                 obj.lambda*Utility_Function(obj.cf,obj.sigma.f) + ...
@@ -199,10 +202,21 @@ classdef Economy
             obj.Vo = obj.Vnd;
             
             % check where there is default
-            extended_Vd = repmat(obj.Vd,1,obj.n_bonds,obj.n_bonds);
             def = (obj.Vnd < extended_Vd);
+            [def_states, ~] = find(def); % retrieving the states of all default occ.
             obj.z(def) = 0;
-            obj.Vo(def) = extended_Vd(def);
+            obj.Vo(def) = obj.Vd(def_states);
+            obj.r(def) = obj.default.r(def_states);
+            obj.w(def) = obj.default.w(def_states);
+            obj.cr(def) = obj.default.cr(def_states);
+            obj.cf(def) = obj.default.cf(def_states);
+            obj.g(def) = obj.default.g(def_states);
+            obj.q(def) = 0;
+            obj.br(def) = 0;
+            obj.bf(def) = 0;
+            obj.bg(def) = 0;
+            obj.kr(def) = 0;
+            obj.kf(def) = obj.e.f(def_states);
         end
         
         function [p, br_s, bf_s, bg_s] = Solution(obj, n, id_br, id_bf)
