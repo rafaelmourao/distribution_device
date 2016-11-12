@@ -11,7 +11,7 @@ classdef Economy
         e
         prob
         n_states
-        grid % structure that defines the grid of bonds
+        grid % structure that defines the grid of bonds, optional
         n_bonds
         default
         p_max
@@ -225,34 +225,11 @@ classdef Economy
         end
         
         function [p, br_s, bf_s, bg_s] = Solution(obj, n, id_br, id_bf)
-            
-            [status_int, p_int, br_int, bf_int, bg_int] = Interior_Solution(obj, n, id_br, id_bf);
-            
-            if (~status_int)
-                
-                [status_cor, p_cor, br_cor, bf_cor, bg_cor] = Corner_Solution(obj, n, id_br, id_bf);
-                
-            end
-            
-            if ( status_int || ~status_cor )
-                p = p_int;
-                br_s = br_int;
-                bf_s = bf_int;
-                bg_s = bg_int;
-            else
-                p = p_cor;
-                br_s = br_cor;
-                bf_s = bf_cor;
-                bg_s = bg_cor;
-            end
-            
-        end
-        
-        function [status, p, br, bf, B] = Interior_Solution(obj, n, id_br, id_bf)
-            % Parameters
-            
-            epsilon = .1;
-            
+                        
+            p = 0;
+            br_s = 0;
+            bf_s = 0;
+            bg_s = 0;
             % VARIABLES NEEDED
             
             %Grid
@@ -300,33 +277,26 @@ classdef Economy
                 zt1.*(qt1.*bgt1 - repmat(grid_g,obj.n_states,1));
             
             ratio_g = @(p) Euler_ratio(obj, n, zt1, num_g, denom_g(p),obj.sigma.g);
-            euler_g = @(p) abs(ratio_g(p) - p);
             
             denom_r = @(p) ((1+rt)*brt_1 + wt - p*grid_r');
             num_r = ((1+rt1).^(-1/obj.sigma.r)).*...
                 (zt1.*bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1);
             ratio_r = @(p) Euler_ratio(obj, n, zt1, num_r, denom_r(p),obj.sigma.r);
-            euler_r = @(p) abs(p - ratio_r(p));
             
             
             denom_f = @(p) ((1+rt)*(eft + bft_1) - p*grid_f');
             num_f = (1+rt1).^(-1/obj.sigma.f).*...
                 ((1+rt1).*(repmat(obj.e.f,1,l_grid_g) +...
                 bsxfun(@times,zt1,grid_f)) - zt1.*qt1.*bft1);
-            ratio_f = @(p) Euler_ratio(obj, n, zt1,num_f,denom_f(p),obj.sigma.f);
-            euler_f = @(p) abs(p - ratio_f(p));
+            ratio_f = @(p) Euler_ratio(obj, n, zt1, num_f, denom_f(p),obj.sigma.f);
+
+            f_0 = ratio_f(0);
+            r_0 = ratio_r(0);
+            g_0 = ratio_g(0);
             
-            f = @(p) min(euler_g(p) + euler_r(p) + euler_f(p));
+            if (f_0 <= 0) 
             
-            [p, sum_euler] = fminbnd(f,0,obj.p_max);
             
-            [~, b_star] = f(p);
-            
-            B = grid_g(b_star);
-            br = grid_r(b_star);
-            bf = grid_f(b_star);
-            
-            status = (sum_euler < epsilon);
             
         end
         
