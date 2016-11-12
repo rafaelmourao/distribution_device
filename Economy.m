@@ -97,7 +97,7 @@ classdef Economy
             %Government
             obj.bg = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);     %     %BONDS policy funtion for the GOVERNMENT
             obj.g = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);            %PUBLIC EXPENDITURE policy funtion for the GOVERNMENT
-            obj.z = (rand(obj.n_states,obj.n_bonds,obj.n_bonds) >.1);       %DEFAULT policy funtion for the GOVERNMENT
+            obj.z = (rand(obj.n_states,obj.n_bonds,obj.n_bonds) >.5);       %DEFAULT policy funtion for the GOVERNMENT
             
             %% PRICE FUNCTIONS
             
@@ -147,9 +147,9 @@ classdef Economy
             next_Vo = zeros(n_b_states_size);
             
             
-            parfor(i=1:n_b_states,nworkers)   %RESIDENTS bonds from previous period
+            parfor(i=1:n_b_states,nworkers)
                 
-                [n, id_br, id_bf] = ind2sub(n_b_states_size,i)
+                [n, id_br, id_bf] = ind2sub(n_b_states_size,i);
                 
                 [p(i), br_s(i),...
                     bf_s(i), bg_s(i)] = ...
@@ -225,11 +225,14 @@ classdef Economy
         end
         
         function [p, br_s, bf_s, bg_s] = Solution(obj, n, id_br, id_bf)
-                        
+            
+            % Default (corner) solution
+            
             p = 0;
             br_s = 0;
             bf_s = 0;
             bg_s = 0;
+            
             % VARIABLES NEEDED
             
             %Grid
@@ -260,10 +263,6 @@ classdef Economy
             
             % ALGORITHM
             
-            %YOU DON'T NEED TO CONSIDER 'zt' IN THE DENOMINADOR, SINCE
-            %THE BOND MARKET MUST BE OPEN FOR THIS CALCULATION DO BE DONE
-            %YOU DO NEED 'zt1'
-            
             denom_g = @(p) (obj.tc/(1+obj.tc))*...
                 (((1+rt)*brt_1 + wt - p*grid_r') + ...
                 ((1+rt)*(eft + bft_1) - p*grid_f')) + ...
@@ -289,276 +288,86 @@ classdef Economy
                 ((1+rt1).*(repmat(obj.e.f,1,l_grid_g) +...
                 bsxfun(@times,zt1,grid_f)) - zt1.*qt1.*bft1);
             ratio_f = @(p) Euler_ratio(obj, n, zt1, num_f, denom_f(p),obj.sigma.f);
-
+            
             f_0 = ratio_f(0);
             r_0 = ratio_r(0);
             g_0 = ratio_g(0);
             
-            if (f_0 <= 0) 
-            
-            
+            if ( all(isnan(r_0) & isnan(f_0)) ...
+                    || all( max(r_0,f_0) < g_0 ) )
+                return
+            else
+                [p, i] = bissectionSolution(obj, ratio_g, ...
+                    ratio_r, ratio_f);
+                br_s = grid_r(i);
+                bf_s = grid_f(i);
+                bg_s = grid_g(i);
+            end
             
         end
         
-        function [status, p, br, bf, B] = ...
-                Corner_Solution(obj, n, id_br, id_bf)
+        function [p, i] = bissectionSolution(obj, ratio_g, ratio_r, ratio_f)
             
-            [status, p, br, bf, B, pr, pf, pg] = ...
-                Corner_Solution_1(obj, n, id_br, id_bf);
+            pmin = 0;
+            pmax = obj.p_max;
             
-            if (status)
-                return
+            gov = @(p) ( max(ratio_g(p),0) <= p  ); %if ratio_g is lower than price
+            % for the consumers, function is defined below
+                       
+            while any( gov(pmax) & cons(pmax) )
+                pmax = 2*pmax;
+           %     disp('Increased max price')
             end
             
-            [status, p, br, bf, B] = Corner_Solution_2(obj, n, id_br, id_bf);
-            
-            if (status)
-                return
+            i = [];
+            isave=[];
+            dist = pmax - pmin;
+            while dist > 1e-6
+                p = pmin + (pmax - pmin)/2;
+                i_g = gov(p);
+                i_p = cons(p);
+                i = ( i_g & i_p );
+                if ~any(i)
+                    if any(i_g)
+                        pmax = p;
+                    else
+                        pmin = p;
+                        isave = i_p;
+                    end
+                else
+                    pmin = p;
+                    isave = i;
+                end
+                dist = pmax - pmin;
             end
+%             if (pmin == 0)
+%                 p = 0;
+%             end
             
-            [status, p, br, bf, B] = Corner_Solution_3(obj, n, id_br, id_bf);
-            
-            if (status)
-                return
+            if ~any(i)
+                if any(isave)
+                i = isave;
+                else
+                    i = 1;
+                end
             end
-            
-            [status, p, br, bf, B] = Corner_Solution_others(obj, ...
-                pr, pf, pg);
+            i;
+            i = find(i,1,'last'); % in case there is more than one solution at this price
+            %disp('Warning: more than one solution found')
+                       
+            function c = cons(p)
+                cons_r = ( ratio_r(p) >= p );
+                cons_f = ( ratio_f(p) >= p );
+                % If one of the bonds is zero, it is only needed that the
+                % other condition is satisfied
+                c = ( cons_r | obj.grid.r_aux' == 0 ) ...
+                & ( cons_f | obj.grid.f_aux' == 0 );
+                % for the bond combination (0,0) it is only needed that one ...
+                % constraint is satisfied
+                c(1) = ( cons_r(1) || cons_f(1) );
+            end
         end
         
-        function [status, p, br, bf, B, pr, pf, pg] = ...
-                Corner_Solution_1(obj, n, id_br, id_bf)
-            
-            B = 0;
-            br = 0;
-            bf = 0;
-            
-            % Future
-            rt1 = obj.r(:,1,1);
-            wt1 = obj.w(:,1,1);
-            qt1 = obj.q(:,1,1);
-            zt1 = obj.z(:,1,1);
-            brt1 = obj.br(:,1,1);
-            bft1 = obj.bf(:,1,1);
-            bgt1 = obj.bg(:,1,1);
-            brt_1 = obj.br(n, id_br, id_bf);
-            bft_1 = obj.bf(n, id_br, id_bf);
-            bgt_1 = obj.bg(n, id_br, id_bf);
-            rt = obj.r(n, id_br, id_bf);
-            wt = obj.w(n, id_br, id_bf);
-            eft = obj.e.f(n);
-            
-            denom_r = ((1+rt)*brt_1 + wt);
-            num_r = ((1+rt1).^(-1/obj.sigma.r)).*...
-                (wt1 - zt1.*qt1.*brt1);
-            
-            pr = Euler_ratio(obj,n,zt1,num_r,denom_r,obj.sigma.r);
-            
-            denom_f = (1+rt)*(bft_1 + eft);
-            num_f = ((1+rt1).^(-1/obj.sigma.f)).*...
-                (bsxfun(@times,(1+rt1),obj.e.f) - zt1.*qt1.*bft1);
-            
-            pf = Euler_ratio(obj,n,zt1,num_f,denom_f,obj.sigma.f);
-            
-            denom_g = (obj.tc/(1+obj.tc))*(((1+rt)*brt_1 + wt) +...
-                ((1+rt)*(bft_1 + eft))) - bgt_1;
-            
-            num_g = (obj.tc/(1+obj.tc))*((wt1 - zt1.*qt1.*brt1) +...
-                (bsxfun(@times,(1+rt1),obj.e.f) - zt1.*qt1.*bft1)) +...
-                zt1.*qt1.*bgt1;
-            
-            pg = Euler_ratio(obj, n, zt1, num_g, denom_g,obj.sigma.g);
-            
-            p = max(pr,pf);
-            
-            status = (p < pg);
-            
-        end
-        
-        function [status, p, br, bf, B] = Corner_Solution_2(obj, n, id_br, id_bf)
-            
-            epsilon = .1;
-            br = 0;
-            
-            grid_f = obj.grid.b_f;
-            l_grid_f = length(grid_f);
-            
-            % Past and current
-            bgt_1 = obj.bg(n, id_br, id_bf);
-            bft_1 = obj.bf(n, id_br, id_bf);
-            brt_1 = obj.br(n, id_br, id_bf);
-            rt = obj.r(n, id_br, id_bf);
-            wt = obj.w(n, id_br, id_bf);
-            eft = obj.e.f(n);
-            
-            % Future
-            bft1 = squeeze(obj.bf(:,1,:));
-            %crt = obj.cr(n, id_br, id_bf);
-            rt1 = squeeze(obj.r(:,1,:));
-            wt1 = squeeze(obj.w(:,1,:));
-            qt1 = squeeze(obj.q(:,1,:));
-            zt1 = squeeze(obj.z(:,1,:));
-            brt1 = squeeze(obj.br(:,1,:));
-            bgt1 = squeeze(obj.bg(:,1,:));
-            %crt1 = squeeze(obj.cr(:,1,:));
-            
-            % Euler equations
-            
-            denom_g = @(p) (obj.tc/(1+obj.tc))*((1+rt)*brt_1 + wt) + ... %Resident consumption when br=0
-                (obj.tc/(1+obj.tc))*((1+rt)*(eft + bft_1) - p*grid_f') -...
-                bgt_1 + p*grid_f';
-            num_g = (obj.tc/(1+obj.tc))*(wt1 - zt1.*qt1.*brt1) +... %Resident consumption when br=0
-                (obj.tc/(1+obj.tc))*((1+rt1).*(repmat(obj.e.f,1,l_grid_f) +...
-                repmat(grid_f,obj.n_states,1)) - zt1.*qt1.*bft1) - ...
-                bsxfun(@times,zt1,grid_f) + qt1.*zt1.*bgt1;
-            ratio_g = @(p) Euler_ratio(obj,n,zt1,num_g,denom_g(p),obj.sigma.g);
-            euler_g = @(p) abs(ratio_g(p) - p);
-            
-            denom_f = @(p) (1+rt)*(eft + bft_1) - p*grid_f';
-            num_f = ((1+rt1).^(-1/obj.sigma.f)).*...
-                ((1+rt1).*(repmat(obj.e.f,1,l_grid_f) +...
-                bsxfun(@times,zt1,grid_f) - zt1.*qt1.*bft1));
-            ratio_f = @(p) Euler_ratio(obj,n,zt1,num_f,denom_f(p),obj.sigma.f);
-            euler_f = @(p) abs(p - ratio_f(p));
-            
-            % objective function
-            f = @(p) min(euler_g(p) + euler_f(p));
-            
-            [p, sum_euler] = fminbnd(f,0,obj.p_max);
-            [~, b_star] = f(p);
-            B = grid_f(b_star);
-            bf = grid_f(b_star);
-            
-            rt1_c2 = obj.r(:,1,b_star);
-            wt1_c2 = obj.w(:,1,b_star);
-            qt1_c2 = obj.q(:,1,b_star);
-            zt1_c2 = obj.z(:,1,b_star);
-            brt1_c2 = obj.br(:,1,b_star);
-            
-            denom_r_c2 = (1+rt)*brt_1 + wt;
-            num_r_c2 = ((1+rt1_c2).^(-1/obj.sigma.r)).*...
-                (wt1_c2 - zt1_c2.*qt1_c2.*brt1_c2);
-            
-            pr_0_c2 = Euler_ratio(obj, n, zt1_c2, num_r_c2, denom_r_c2,obj.sigma.r);
-            
-            status = (sum_euler < epsilon & pr_0_c2 <= p);
-            
-        end
-        
-        function [status, p, br, bf, B] = Corner_Solution_3(obj, n, id_br, id_bf)
-            %This is the case where the FOREIGN investor chooses zero bonds:'bf = 0'
-            
-            bf = 0;
-            epsilon = .1;
-            
-            %Grid
-            eft = obj.e.f(n);
-            grid_r = obj.grid.b_r;
-            
-            %State
-            bft_1 = obj.bf(n, id_br, id_bf);
-            brt_1 = obj.br(n, id_br, id_bf);
-            bgt_1 = obj.bg(n, id_br, id_bf);
-            rt = obj.r(n, id_br, id_bf);
-            wt = obj.w(n, id_br, id_bf);
-            
-            
-            %Government
-            rt1 = obj.r(:,:,1);
-            wt1 = obj.w(:,:,1);
-            qt1 = obj.q(:,:,1);
-            zt1 = obj.z(:,:,1);
-            brt1 = obj.br(:,:,1);
-            bft1 = obj.bf(:,:,1);
-            bgt1 = obj.bg(:,:,1);
-            
-            %% ALGORITHM
-            
-            denom_g = @(p) (obj.tc/(1+obj.tc))*...
-                ((1+rt)*brt_1 + wt - p*grid_r') +...
-                (obj.tc/(1+obj.tc))*(1+rt)*(bft_1 + eft) -... Foreigner consumption when bf=0
-                bgt_1 + p*grid_r';
-            num_g = (obj.tc/(1+obj.tc))*...
-                (bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1) + ...
-                (obj.tc/(1+obj.tc))*(bsxfun(@times,(1+rt1),obj.e.f) - zt1.*qt1.*bft1) - ... Foreigner consumption when bf=0
-                bsxfun(@times,zt1,grid_r) + zt1.*qt1.*bgt1;
-            ratio_g = @(p) Euler_ratio(obj, n, zt1, num_g, denom_g(p),obj.sigma.g);
-            euler_g = @(p) abs(ratio_g(p) - p);
-            
-            
-            denom_r = @(p) (1+rt)*brt_1 + wt - p*grid_r';
-            num_r = (1+rt1).^(-1/obj.sigma.r).*...
-                (zt1.*bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1);
-            ratio_r = @(p) Euler_ratio(obj,n,zt1,num_r,denom_r(p),obj.sigma.r);
-            euler_r = @(p) abs(p - ratio_r(p));
-            
-            f = @(p) min(euler_g(p) + euler_r(p));
-            
-            [p, sum_euler] = fminbnd(f,0,obj.p_max);
-            
-            [~, b_star] = f(p);
-            
-            B = grid_r(b_star);
-            br = grid_r(b_star);
-            
-            rt1_c3 = obj.r(:,b_star,1);
-            qt1_c3 = obj.q(:,b_star,1);
-            zt1_c3 = obj.z(:,b_star,1);
-            bft1_c3 = obj.bf(:,b_star,1);
-            
-            denom_f_c3 = (1+rt)*(obj.e.f(n) + bft_1);
-            num_f_c3 = (1+rt1_c3).^(-1/obj.sigma.f).*...
-                (bsxfun(@times,(1+rt1_c3),obj.e.f) - zt1_c3.*qt1_c3.*bft1_c3);
-            
-            pf_0_c3 = Euler_ratio(obj, n, zt1_c3, num_f_c3, denom_f_c3, obj.sigma.f);
-            
-            status = (sum_euler < epsilon && pf_0_c3 < p);
-            
-            
-        end
-        
-        function [status, p, br, bf, B] = ...
-                Corner_Solution_others(~, pr_c1, pf_c1, pg_c1 )
-            
-            %CASE 4: B = 0 and br = 0
-            B = 0;
-            br = 0;
-            bf = 0;
-            pr_0_c4 = pr_c1;
-            pf_0_c4 = pf_c1;
-            pg_0_c4 = pg_c1;
-            p_c4 = pf_0_c4;
-            status = (p_c4 < pg_0_c4) && (p_c4 > pr_0_c4);
-            
-            if status
-                return
-            end
-            
-            
-            %CASE 5: B = 0 and bf = 0
-            B = 0;
-            br = 0;
-            bf = 0;
-            pr_0_c5 = pr_c1;
-            pf_0_c5 = pf_c1;
-            pg_0_c5 = pg_c1;
-            p = pr_0_c5;
-            status = (p < pg_0_c5) && (p > pf_0_c5);
-            
-            if status
-                return
-            end
-            
-            %CASE 6: br = 0 and bf = 0
-            B = 0;
-            br = 0;
-            bf = 0;
-            pr_0_c6 = pr_c1;
-            pf_0_c6 = pf_c1;
-            pg_0_c6 = pg_c1;
-            p = pg_0_c6;
-            status = (p > pr_0_c6) && (p > pf_0_c6);
-        end
         
         function ratio = Euler_ratio(obj,n, zt1, x, y, sig)
             

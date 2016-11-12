@@ -39,17 +39,17 @@ param.sigma.f = 2;
 param.sigma.g = 2;                                        %Utility function parameter: risk aversion
 param.phi = .282;                                         %Probability of redemption (Arellano)
 param.lambda = 1;                                         %Government preference parameter: foreigners relative to residents
-param.tc = .3;                                            %Tax rate over CONSUMPTION
+param.tc = .2;                                            %Tax rate over CONSUMPTION
 
 %Firm
 param.alpha = .3;                                         %Participation of capital on productio
 param.rho = -1;                                           %Elasticity of Substitution between capital and labor is 1/2 (=1/(1-rho))
 
 %Foreigner wealth evolution
-param.e.f = [.1;.3; .5];
+param.e.f = [.1;.2;.5];
 
 %Transition Matrix
-param.prob = [.3 .6 .1;.2 .6 .2;.1 .6 .3];                %Construction od the Probability matrix
+param.prob = [.4 .5 .1;.2 .6 .2;.1 .6 .3];                %Construction od the Probability matrix
 param.n_states = size(param.prob,1);                            %Numbers of States of Nature
 
 % GRID
