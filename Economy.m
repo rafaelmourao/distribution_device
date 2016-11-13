@@ -70,10 +70,10 @@ classdef Economy
             
             % Generating auxiliary grid
             
-            obj.extended_grid.b_r = repmat(obj.grid.b_r,obj.n_states,1,obj.n_bonds);
-            obj.extended_grid.b_f = repmat(reshape(obj.grid.b_f,1,1,obj.n_bonds),...
+            obj.extended_grid.b_r = repmat(obj.grid.b_r,[obj.n_states,1,obj.n_bonds]);
+            obj.extended_grid.b_f = repmat(reshape(obj.grid.b_f,[1,1,obj.n_bonds]),...
                 obj.n_states,obj.n_bonds);
-            obj.extended_grid.e_f = repmat(obj.e.f,1,obj.n_bonds,obj.n_bonds);
+            obj.extended_grid.e_f = repmat(obj.e.f,[1,obj.n_bonds,obj.n_bonds]);
             
             % Value functions
             
@@ -89,7 +89,7 @@ classdef Economy
             obj.cf = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);          %CONSUMPTION policy funtion for FOREIGNERS
             
             obj.kr = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);          %CAPITAL policy funtion for RESIDENTS
-            obj.kf = repmat(obj.e.f,1,obj.n_bonds,obj.n_bonds);           %CAPITAL policy funtion for FOREIGNERS
+            obj.kf = repmat(obj.e.f,[1,obj.n_bonds,obj.n_bonds]);           %CAPITAL policy funtion for FOREIGNERS
             
             obj.br = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);          %BONDS policy funtion for RESIDENTS
             obj.bf = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);          %BONDS policy funtion for FOREIGNERS
