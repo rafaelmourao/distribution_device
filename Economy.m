@@ -97,7 +97,7 @@ classdef Economy
             %Government
             obj.bg = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);     %     %BONDS policy funtion for the GOVERNMENT
             obj.g = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);            %PUBLIC EXPENDITURE policy funtion for the GOVERNMENT
-            obj.z = (rand(obj.n_states,obj.n_bonds,obj.n_bonds) >.5);       %DEFAULT policy funtion for the GOVERNMENT
+            obj.z = ones(obj.n_states,obj.n_bonds,obj.n_bonds);       %DEFAULT policy funtion for the GOVERNMENT
             
             %% PRICE FUNCTIONS
             
@@ -108,7 +108,7 @@ classdef Economy
             obj.w = (1-obj.alpha)*((obj.alpha*((obj.kr+obj.kf).^obj.rho)...
                 + (1-obj.alpha)).^(1/obj.rho-1));           %Wage
             
-            obj.q = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);           %Price of Public Bond
+            obj.q = ones(obj.n_states,obj.n_bonds,obj.n_bonds);           %Price of Public Bond
             
             %% Default Outcomes
             
@@ -263,10 +263,7 @@ classdef Economy
             
             % ALGORITHM
             
-            denom_g = @(p) (obj.tc/(1+obj.tc))*...
-                (((1+rt)*brt_1 + wt - p.*grid_r') + ...
-                ((1+rt)*(eft + bft_1) - p.*grid_f')) + ...
-                (p.*grid_g' - bgt_1);
+            % government
             
             num_g = (obj.tc/(1+obj.tc))*...
                 ((zt1.*bsxfun(@times,(1+rt1),grid_r) + ...
@@ -275,40 +272,95 @@ classdef Economy
                 bsxfun(@times,zt1,grid_f)) - zt1.*qt1.*bft1)) + ...
                 zt1.*(qt1.*bgt1 - repmat(grid_g,obj.n_states,1));
             
+            
+            valid_g = all(num_g > 0);
+            valid_g(1) = 0;
+            
             min_feasible_price_g = ( - obj.tc*...
                 ((1+rt)*brt_1 + wt + ...
                 (1+rt)*(eft + bft_1)) + ...
                 (1+obj.tc)*bgt_1 ) ./ grid_g';
-            
-            valid_g = all(num_g > 0);
             
             denom_g = @(p) (obj.tc/(1+obj.tc))*...
                 (((1+rt)*brt_1 + wt - p.*grid_r(valid_g)') + ...
                 ((1+rt)*(eft + bft_1) - p.*grid_f(valid_g)')) + ...
                 (p.*grid_g(valid_g)' - bgt_1);
             
-            ratio_g = @(p) Euler_ratio(obj, n, zt1(:,valid_g), num_g(:,valid_g), denom_g(p),obj.sigma.g);
+            ratio_g = @(p) Euler_ratio(obj, n, zt1(:,valid_g),...
+                num_g(:,valid_g), denom_g(p),obj.sigma.g);
+            pmax = obj.p_max;
+            while ratio_g(pmax) < p
+                pmax = 2*pmax;
+            end
+            eq_price_g = Inf*ones(1,l_grid_g);
+            eq_price_g(valid_g) = max(bisection(@(p) ratio_g(p) - abs(p),...
+                min_feasible_price_g(valid_g), pmax),0);
             
-            denom_r = @(p) ((1+rt)*brt_1 + wt - p.*grid_r');
+            % residents
+            
             num_r = ((1+rt1).^(-1/obj.sigma.r)).*...
                 (zt1.*bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1);
-            ratio_r = @(p) Euler_ratio(obj, n, zt1, num_r, denom_r(p),obj.sigma.r);
+            
+            valid_r = all(num_r > 0) & grid_r ~= 0;
+            valid_r(1) = 0;
+            
             
             max_feasible_price_r = ( (1+rt)*brt_1 + wt ) ./ grid_r' ;
+            denom_r = @(p) ((1+rt)*brt_1 + wt - p.*grid_r(valid_r)');
+            ratio_r = @(p) Euler_ratio(obj, n, zt1(:,valid_r),...
+                num_r(:,valid_r), denom_r(p),obj.sigma.r);
             
-            denom_f = @(p) ((1+rt)*(eft + bft_1) - p.*grid_f');
+            valid_r(ratio_r(0) <= 1e-6) = 0;
+            
+            ratio_r = @(p) Euler_ratio(obj, n, zt1(:,valid_r),...
+                num_r(:,valid_r), denom_r(p),obj.sigma.r);
+            
+            
+            eq_price_r = -Inf*ones(1,l_grid_g);
+            if ~any(valid_r)
+                eq_price_r(valid_r) = bisection(@(p) ratio_r(p) - abs(p),...
+                    0,max_feasible_price_r(valid_r));
+            end
+            eq_price_r(grid_r == 0) = 0;
+            
+            % foreigners
+            
             num_f = (1+rt1).^(-1/obj.sigma.f).*...
                 ((1+rt1).*(repmat(obj.e.f,1,l_grid_g) +...
                 bsxfun(@times,zt1,grid_f)) - zt1.*qt1.*bft1);
-            ratio_f = @(p) Euler_ratio(obj, n, zt1, num_f, denom_f(p),obj.sigma.f);
             
             max_feasible_price_f = ( (1+rt)*(eft + bft_1) ) ./ grid_f';
             
-            eq_price_g = fsolve(@(p) ratio_g(p) - p, max(min_feasible_price_g(valid_g) + 1,0));
-            eq_price_r = fsolve(@(p) ratio_r(p) - p, max_feasible_price_r / 2);
-            eq_price_f = fsolve(@(p) ratio_f(p) - p, max_feasible_price_f / 2);
-           
+            valid_f = all(num_f > 0) & grid_f ~= 0;
+            valid_f(1) = 0;
             
+            denom_f = @(p) ((1+rt)*(eft + bft_1) - p.*grid_f(valid_f)');
+            ratio_f = @(p) Euler_ratio(obj, n, zt1(:,valid_f),...
+                num_f(:,valid_f), denom_f(p), obj.sigma.f);
+            
+            valid_f(ratio_f(0)< 1e-6) = 0;
+            
+            ratio_f = @(p) Euler_ratio(obj, n, zt1(:,valid_f),...
+                num_f(:,valid_f), denom_f(p), obj.sigma.f);
+            
+            eq_price_f = -Inf*ones(1,l_grid_g);
+            if ~any(valid_f)
+                eq_price_f(valid_f) = bisection(@(p) ratio_f(p) - abs(p),...
+                    0, max_feasible_price_f(valid_f));
+            end
+            eq_price_f(grid_f == 0) = 0;
+            
+            % finding market equilibrium
+            
+            prices = min(eq_price_f,eq_price_r);
+            prices(eq_price_g > prices) = 0;
+            [p, i] = max(prices);
+            if p == 0
+                i = 1;
+            end
+            br_s = grid_r(i);
+            bf_s = grid_f(i);
+            bg_s = grid_g(i);
             
         end
         

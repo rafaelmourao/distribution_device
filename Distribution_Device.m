@@ -46,7 +46,7 @@ param.alpha = .3;                                         %Participation of capi
 param.rho = -1;                                           %Elasticity of Substitution between capital and labor is 1/2 (=1/(1-rho))
 
 %Foreigner wealth evolution
-param.e.f = [.1;.2;.5];
+param.e.f = [1;2;5];
 
 %Transition Matrix
 param.prob = [.4 .5 .1;.2 .6 .2;.1 .6 .3];                %Construction od the Probability matrix
@@ -56,8 +56,8 @@ param.n_states = size(param.prob,1);                            %Numbers of Stat
 
 %Public Bonds
 param.min_b = 0;                                          %Minimum value for bonds
-param.max_b = .5;                                         %Maximum value for bonds
-param.n_bonds = 5;                                       %Quantity of points on the grid for the investors
+param.max_b = 1;                                         %Maximum value for bonds
+param.n_bonds = 10;                                       %Quantity of points on the grid for the investors
 
 %%
 
@@ -67,7 +67,7 @@ epsilon = 1e-3;                                     %Tolerance level
 dist = 100;                                         %Distance between previous and current price and bond functions
 t = 1;                                              %Number of interations
 
-while dist > epsilon && t <= 10000
+while dist > epsilon && t <= 1000
     tic
     t = t+1;
     
