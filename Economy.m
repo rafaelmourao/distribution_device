@@ -264,9 +264,9 @@ classdef Economy
             % ALGORITHM
             
             denom_g = @(p) (obj.tc/(1+obj.tc))*...
-                (((1+rt)*brt_1 + wt - p*grid_r') + ...
-                ((1+rt)*(eft + bft_1) - p*grid_f')) + ...
-                (p*grid_g' - bgt_1);
+                (((1+rt)*brt_1 + wt - p.*grid_r') + ...
+                ((1+rt)*(eft + bft_1) - p.*grid_f')) + ...
+                (p.*grid_g' - bgt_1);
             
             num_g = (obj.tc/(1+obj.tc))*...
                 ((zt1.*bsxfun(@times,(1+rt1),grid_r) + ...
@@ -275,99 +275,42 @@ classdef Economy
                 bsxfun(@times,zt1,grid_f)) - zt1.*qt1.*bft1)) + ...
                 zt1.*(qt1.*bgt1 - repmat(grid_g,obj.n_states,1));
             
-            ratio_g = @(p) Euler_ratio(obj, n, zt1, num_g, denom_g(p),obj.sigma.g);
+            min_feasible_price_g = ( - obj.tc*...
+                ((1+rt)*brt_1 + wt + ...
+                (1+rt)*(eft + bft_1)) + ...
+                (1+obj.tc)*bgt_1 ) ./ grid_g';
             
-            denom_r = @(p) ((1+rt)*brt_1 + wt - p*grid_r');
+            valid_g = all(num_g > 0);
+            
+            denom_g = @(p) (obj.tc/(1+obj.tc))*...
+                (((1+rt)*brt_1 + wt - p.*grid_r(valid_g)') + ...
+                ((1+rt)*(eft + bft_1) - p.*grid_f(valid_g)')) + ...
+                (p.*grid_g(valid_g)' - bgt_1);
+            
+            ratio_g = @(p) Euler_ratio(obj, n, zt1(:,valid_g), num_g(:,valid_g), denom_g(p),obj.sigma.g);
+            
+            denom_r = @(p) ((1+rt)*brt_1 + wt - p.*grid_r');
             num_r = ((1+rt1).^(-1/obj.sigma.r)).*...
                 (zt1.*bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1);
             ratio_r = @(p) Euler_ratio(obj, n, zt1, num_r, denom_r(p),obj.sigma.r);
             
+            max_feasible_price_r = ( (1+rt)*brt_1 + wt ) ./ grid_r' ;
             
-            denom_f = @(p) ((1+rt)*(eft + bft_1) - p*grid_f');
+            denom_f = @(p) ((1+rt)*(eft + bft_1) - p.*grid_f');
             num_f = (1+rt1).^(-1/obj.sigma.f).*...
                 ((1+rt1).*(repmat(obj.e.f,1,l_grid_g) +...
                 bsxfun(@times,zt1,grid_f)) - zt1.*qt1.*bft1);
             ratio_f = @(p) Euler_ratio(obj, n, zt1, num_f, denom_f(p),obj.sigma.f);
             
-            f_0 = ratio_f(0);
-            r_0 = ratio_r(0);
-            g_0 = ratio_g(0);
+            max_feasible_price_f = ( (1+rt)*(eft + bft_1) ) ./ grid_f';
             
-            if ( all(isnan(r_0) & isnan(f_0)) ...
-                    || all( max(r_0,f_0) < g_0 ) )
-                return
-            else
-                [p, i] = bissectionSolution(obj, ratio_g, ...
-                    ratio_r, ratio_f);
-                br_s = grid_r(i);
-                bf_s = grid_f(i);
-                bg_s = grid_g(i);
-            end
+            eq_price_g = fsolve(@(p) ratio_g(p) - p, max(min_feasible_price_g(valid_g) + 1,0));
+            eq_price_r = fsolve(@(p) ratio_r(p) - p, max_feasible_price_r / 2);
+            eq_price_f = fsolve(@(p) ratio_f(p) - p, max_feasible_price_f / 2);
+           
+            
             
         end
-        
-        function [p, i] = bissectionSolution(obj, ratio_g, ratio_r, ratio_f)
-            
-            pmin = 0;
-            pmax = obj.p_max;
-            
-            gov = @(p) ( max(ratio_g(p),0) <= p  ); %if ratio_g is lower than price
-            % for the consumers, function is defined below
-                       
-            while any( gov(pmax) & cons(pmax) )
-                pmax = 2*pmax;
-           %     disp('Increased max price')
-            end
-            
-            i = [];
-            isave=[];
-            dist = pmax - pmin;
-            while dist > 1e-6
-                p = pmin + (pmax - pmin)/2;
-                i_g = gov(p);
-                i_p = cons(p);
-                i = ( i_g & i_p );
-                if ~any(i)
-                    if any(i_g)
-                        pmax = p;
-                    else
-                        pmin = p;
-                        isave = i_p;
-                    end
-                else
-                    pmin = p;
-                    isave = i;
-                end
-                dist = pmax - pmin;
-            end
-%             if (pmin == 0)
-%                 p = 0;
-%             end
-            
-            if ~any(i)
-                if any(isave)
-                i = isave;
-                else
-                    i = 1;
-                end
-            end
-            i;
-            i = find(i,1,'last'); % in case there is more than one solution at this price
-            %disp('Warning: more than one solution found')
-                       
-            function c = cons(p)
-                cons_r = ( ratio_r(p) >= p );
-                cons_f = ( ratio_f(p) >= p );
-                % If one of the bonds is zero, it is only needed that the
-                % other condition is satisfied
-                c = ( cons_r | obj.grid.r_aux' == 0 ) ...
-                & ( cons_f | obj.grid.f_aux' == 0 );
-                % for the bond combination (0,0) it is only needed that one ...
-                % constraint is satisfied
-                c(1) = ( cons_r(1) || cons_f(1) );
-            end
-        end
-        
         
         function ratio = Euler_ratio(obj,n, zt1, x, y, sig)
             
