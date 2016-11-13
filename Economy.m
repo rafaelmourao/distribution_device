@@ -324,7 +324,7 @@ classdef Economy
                 eq_price_r(valid_r) = bisection(@(p) ratio_r(p) - abs(p),...
                     0,max_feasible_price_r(valid_r));
             end
-            eq_price_r(grid_r == 0) = 0;
+            eq_price_r(grid_r == 0) = 1e6;
             
             % foreigners
             
@@ -355,7 +355,7 @@ classdef Economy
                 eq_price_f(valid_f) = bisection(@(p) ratio_f(p) - abs(p),...
                     0, max_feasible_price_f(valid_f));
             end
-            eq_price_f(grid_f == 0) = 0;
+            eq_price_f(grid_f == 0) = 1e6;
             
             % finding market equilibrium
             
