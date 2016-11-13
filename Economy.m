@@ -301,23 +301,26 @@ classdef Economy
             num_r = ((1+rt1).^(-1/obj.sigma.r)).*...
                 (zt1.*bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1);
             
-            valid_r = all(num_r > 0) & grid_r ~= 0;
+            max_feasible_price_r = ( (1+rt)*brt_1 + wt ) ./ grid_r' ;
+            
+            denom_r_0 = ((1+rt)*brt_1 + wt);
+            ratio_r_0 = Euler_ratio(obj, n, zt1,...
+                num_r, denom_r_0,obj.sigma.r);
+            
+            valid_r = ~(isnan(ratio_r_0) | ratio_r_0 < 1e-6 | grid_r' == 0);
             valid_r(1) = 0;
             
+            grid_r_valid = grid_r(valid_r);
+            num_r_valid = num_r(:,valid_r);
+            zt1_r_valid = zt1(:,valid_r);
             
-            max_feasible_price_r = ( (1+rt)*brt_1 + wt ) ./ grid_r' ;
-            denom_r = @(p) ((1+rt)*brt_1 + wt - p.*grid_r(valid_r)');
-            ratio_r = @(p) Euler_ratio(obj, n, zt1(:,valid_r),...
-                num_r(:,valid_r), denom_r(p),obj.sigma.r);
-            
-            valid_r(ratio_r(0) <= 1e-6) = 0;
-            
-            ratio_r = @(p) Euler_ratio(obj, n, zt1(:,valid_r),...
-                num_r(:,valid_r), denom_r(p),obj.sigma.r);
-            
+            denom_r = @(p) ((1+rt)*brt_1 + wt - p.*grid_r_valid');
+            ratio_r = @(p) Euler_ratio(obj, n, zt1_r_valid,...
+                num_r_valid, denom_r(p),obj.sigma.r);
+
             
             eq_price_r = -Inf*ones(1,l_grid_g);
-            if ~any(valid_r)
+            if any(valid_r)
                 eq_price_r(valid_r) = bisection(@(p) ratio_r(p) - abs(p),...
                     0,max_feasible_price_r(valid_r));
             end
@@ -330,21 +333,25 @@ classdef Economy
                 bsxfun(@times,zt1,grid_f)) - zt1.*qt1.*bft1);
             
             max_feasible_price_f = ( (1+rt)*(eft + bft_1) ) ./ grid_f';
+                       
+            denom_f_0 = ((1+rt)*(eft + bft_1));
+            ratio_f_0 = Euler_ratio(obj, n, zt1,...
+                num_f, denom_f_0, obj.sigma.f);
             
-            valid_f = all(num_f > 0) & grid_f ~= 0;
+            valid_f = ~(isnan(ratio_f_0) | ratio_f_0 < 1e-6 | grid_f' == 0);
             valid_f(1) = 0;
             
-            denom_f = @(p) ((1+rt)*(eft + bft_1) - p.*grid_f(valid_f)');
-            ratio_f = @(p) Euler_ratio(obj, n, zt1(:,valid_f),...
-                num_f(:,valid_f), denom_f(p), obj.sigma.f);
+            grid_f_valid = grid_f(valid_f);
+            num_f_valid = num_f(:,valid_f);
+            zt1_f_valid = zt1(:,valid_f);
             
-            valid_f(ratio_f(0)< 1e-6) = 0;
-            
-            ratio_f = @(p) Euler_ratio(obj, n, zt1(:,valid_f),...
-                num_f(:,valid_f), denom_f(p), obj.sigma.f);
+            denom_f = @(p) ((1+rt)*(eft + bft_1) - p.*grid_f_valid');
+            ratio_f = @(p) Euler_ratio(obj, n, zt1_f_valid,...
+                num_f_valid, denom_f(p), obj.sigma.f);
+
             
             eq_price_f = -Inf*ones(1,l_grid_g);
-            if ~any(valid_f)
+            if any(valid_f)
                 eq_price_f(valid_f) = bisection(@(p) ratio_f(p) - abs(p),...
                     0, max_feasible_price_f(valid_f));
             end
