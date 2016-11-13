@@ -91,11 +91,16 @@ classdef Economy
             obj.kr = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);          %CAPITAL policy funtion for RESIDENTS
             obj.kf = repmat(obj.e.f,[1,obj.n_bonds,obj.n_bonds]);           %CAPITAL policy funtion for FOREIGNERS
             
-            obj.br = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);          %BONDS policy funtion for RESIDENTS
-            obj.bf = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);          %BONDS policy funtion for FOREIGNERS
-            
+            %obj.br = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);          %BONDS policy funtion for RESIDENTS
+            obj.br = reshape(kron(obj.grid.r_aux,[1,1,1]),...
+                [obj.n_states,obj.n_bonds,obj.n_bonds]);
+%             obj.bf = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);          %BONDS policy funtion for FOREIGNERS
+            obj.bf = reshape(kron(obj.grid.f_aux,[1,1,1]),...
+                [obj.n_states,obj.n_bonds,obj.n_bonds]);
+
             %Government
-            obj.bg = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);     %     %BONDS policy funtion for the GOVERNMENT
+%             obj.bg = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);     %     %BONDS policy funtion for the GOVERNMENT
+            obj.bg = obj.br + obj.bf;
             obj.g = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);            %PUBLIC EXPENDITURE policy funtion for the GOVERNMENT
             obj.z = ones(obj.n_states,obj.n_bonds,obj.n_bonds);       %DEFAULT policy funtion for the GOVERNMENT
             
@@ -281,20 +286,32 @@ classdef Economy
                 (1+rt)*(eft + bft_1)) + ...
                 (1+obj.tc)*bgt_1 ) ./ grid_g';
             
-            denom_g = @(p) (obj.tc/(1+obj.tc))*...
-                (((1+rt)*brt_1 + wt - p.*grid_r(valid_g)') + ...
-                ((1+rt)*(eft + bft_1) - p.*grid_f(valid_g)')) + ...
-                (p.*grid_g(valid_g)' - bgt_1);
             
-            ratio_g = @(p) Euler_ratio(obj, n, zt1(:,valid_g),...
-                num_g(:,valid_g), denom_g(p),obj.sigma.g);
+            denom_g_0 = (obj.tc/(1+obj.tc))*...
+                (((1+rt)*brt_1 + wt) + ...
+                ((1+rt)*(eft + bft_1))) - ...
+                bgt_1;
+                        
+            grid_g_valid = grid_g(valid_g);
+            zt1_g_valid = zt1(:,valid_g);
+            num_g_valid = num_g(:,valid_g);
+            
+            denom_g = @(p) denom_g_0 + ...
+                (1/(1+obj.tc))*p.*grid_g_valid';
+            
+            ratio_g = @(p) Euler_ratio(obj, n, zt1_g_valid,...
+                num_g_valid, denom_g(p),obj.sigma.g);
+            
             pmax = obj.p_max;
-            while ratio_g(pmax) < p
-                pmax = 2*pmax;
+            while any(ratio_g(pmax) < pmax & pmax < 1000)
+                pmax = 10*pmax;
             end
+                        
             eq_price_g = Inf*ones(1,l_grid_g);
-            eq_price_g(valid_g) = max(bisection(@(p) ratio_g(p) - abs(p),...
-                min_feasible_price_g(valid_g), pmax),0);
+            if any(valid_g)
+                eq_price_g(valid_g) = max(bisection(@(p) ratio_g(p) - abs(p),...
+                    min_feasible_price_g(valid_g), pmax),0);
+            end
             
             % residents
             
@@ -314,10 +331,10 @@ classdef Economy
             num_r_valid = num_r(:,valid_r);
             zt1_r_valid = zt1(:,valid_r);
             
-            denom_r = @(p) ((1+rt)*brt_1 + wt - p.*grid_r_valid');
+            denom_r = @(p) (denom_r_0 - p.*grid_r_valid');
             ratio_r = @(p) Euler_ratio(obj, n, zt1_r_valid,...
                 num_r_valid, denom_r(p),obj.sigma.r);
-
+            
             
             eq_price_r = -Inf*ones(1,l_grid_g);
             if any(valid_r)
@@ -333,7 +350,7 @@ classdef Economy
                 bsxfun(@times,zt1,grid_f)) - zt1.*qt1.*bft1);
             
             max_feasible_price_f = ( (1+rt)*(eft + bft_1) ) ./ grid_f';
-                       
+            
             denom_f_0 = ((1+rt)*(eft + bft_1));
             ratio_f_0 = Euler_ratio(obj, n, zt1,...
                 num_f, denom_f_0, obj.sigma.f);
@@ -345,10 +362,10 @@ classdef Economy
             num_f_valid = num_f(:,valid_f);
             zt1_f_valid = zt1(:,valid_f);
             
-            denom_f = @(p) ((1+rt)*(eft + bft_1) - p.*grid_f_valid');
+            denom_f = @(p) (denom_f_0 - p.*grid_f_valid');
             ratio_f = @(p) Euler_ratio(obj, n, zt1_f_valid,...
                 num_f_valid, denom_f(p), obj.sigma.f);
-
+            
             
             eq_price_f = -Inf*ones(1,l_grid_g);
             if any(valid_f)
@@ -361,14 +378,17 @@ classdef Economy
             
             prices = min(eq_price_f,eq_price_r);
             prices(eq_price_g > prices) = 0;
-            [p, i] = max(prices);
-            if p == 0
-                i = 1;
-            end
-            br_s = grid_r(i);
-            bf_s = grid_f(i);
-            bg_s = grid_g(i);
             
+            [~, sorted_bonds] = sort(grid_g,2,'descend');
+            for i = sorted_bonds
+                if ( prices(i) > 0 )
+                    p = prices(i);
+                    br_s = grid_r(i);
+                    bf_s = grid_f(i);
+                    bg_s = grid_g(i);
+                    break
+                end
+            end
         end
         
         function ratio = Euler_ratio(obj,n, zt1, x, y, sig)
