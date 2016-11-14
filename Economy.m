@@ -280,6 +280,7 @@ classdef Economy
             valid_g = all(num_g > 0);
             valid_g(1) = 0;
             
+            % min price where the denominator is still positive
             min_feasible_price_g = ( - obj.tc*...
                 ((1+rt)*brt_1 + wt + ...
                 (1+rt)*(eft + bft_1)) + ...
@@ -309,7 +310,7 @@ classdef Economy
             eq_price_g = Inf*ones(1,l_grid_g);
             if any(valid_g)
                 eq_price_g(valid_g) = max(bisection(@(p) ratio_g(p) - abs(p),...
-                    min_feasible_price_g(valid_g), pmax),0);
+                    min_feasible_price_g(valid_g), repmat(pmax,sum(valid_g),1)),0);
             end
             
             % residents
@@ -317,6 +318,7 @@ classdef Economy
             num_r = ((1+rt1).^(-1/obj.sigma.r)).*...
                 (zt1.*bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1);
             
+            % max price where the denominator is still positive
             max_feasible_price_r = ( (1+rt)*brt_1 + wt ) ./ grid_r' ;
             
             denom_r_0 = ((1+rt)*brt_1 + wt);
@@ -348,6 +350,7 @@ classdef Economy
                 ((1+rt1).*(repmat(obj.e.f,1,l_grid_g) +...
                 bsxfun(@times,zt1,grid_f)) - zt1.*qt1.*bft1);
             
+            % max price where the denominator is still positive
             max_feasible_price_f = ( (1+rt)*(eft + bft_1) ) ./ grid_f';
             
             denom_f_0 = ((1+rt)*(eft + bft_1));
