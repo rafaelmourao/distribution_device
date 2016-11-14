@@ -303,8 +303,8 @@ classdef Economy
             num_g = obj.A + (obj.tc/(1+obj.tc))*...
                 ((zt1.*bsxfun(@times,(1+rt1),grid_r) + ...
                 wt1 - zt1.*qt1.*brt1) + ...
-                ((1+rt1).*(repmat(obj.e.f,1,l_grid_g) + ...
-                bsxfun(@times,zt1,grid_f)) - zt1.*qt1.*bft1)) + ...
+                (1+rt1).*(repmat(obj.e.f,1,l_grid_g) + ...
+                bsxfun(@times,zt1,grid_f)) - zt1.*qt1.*bft1) + ...
                 zt1.*(qt1.*bgt1 - repmat(grid_g,obj.n_states,1));
             
             % Disregard cases where the numerator is negative independently
@@ -339,18 +339,19 @@ classdef Economy
             % Find a price where Euler ratio is below price or set a
             % maximum of 1e4;
             
-            pmax = max(min_feasible_price_g(valid_g)+5,5);
-            while any((ratio_g(pmax) < pmax) & pmax < 1e4)
-                pmax = 10*pmax;
+            pmax = max(min_feasible_price_g(valid_g)+.5,.5);
+            while any((ratio_g(pmax) > pmax) & pmax < 1000)
+                pmax = 5*pmax;
             end
-            
+             
             % For invalid cases, set government equilibrium prices to Inf,
             % otherwise find prices which equate euler ratio to the price
             
             eq_price_g = Inf*ones(size(valid_g));
             if any(valid_g)
-                eq_price_g(valid_g) = max(bisection(@(p) ratio_g(p) - abs(p),...
-                    min_feasible_price_g(valid_g), pmax),0);
+                eq_price_g(valid_g) = bisection(@(p) ratio_g(p) - p,...
+                    min_feasible_price_g(valid_g), pmax);
+                eq_price_g(isnan(eq_price_g)) = Inf;
             end
             
         end
