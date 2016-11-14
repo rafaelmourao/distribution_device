@@ -6,6 +6,7 @@ classdef Economy
         phi
         lambda
         tc
+        A
         alpha
         rho
         e
@@ -49,6 +50,7 @@ classdef Economy
             obj.phi = param.phi;
             obj.lambda = param.lambda;
             obj.tc = param.tc;
+            obj.A = param.A;
             obj.alpha = param.alpha;
             obj.rho = param.rho;
             obj.e = param.e;
@@ -129,7 +131,7 @@ classdef Economy
                 obj.default.w(n) = (1-obj.alpha)*((obj.alpha*(obj.e.f(n))^(obj.rho)) + (1-obj.alpha))^(1/obj.rho-1);
                 obj.default.cr(n) = (1/(1+obj.tc))*obj.default.w(n);
                 obj.default.cf(n) = (1/(1+obj.tc))*(1+obj.default.r(n))*obj.e.f(n);
-                obj.default.g(n) = obj.tc*(obj.default.cr(n) + obj.default.cf(n));
+                obj.default.g(n) = obj.A + obj.tc*(obj.default.cr(n) + obj.default.cf(n));
                 obj.default.W(n) =  Utility_Function(obj.default.cr(n),obj.sigma.r) +...
                     obj.lambda*Utility_Function(obj.default.cf(n),obj.sigma.f) ...
                     +  Utility_Function(obj.default.g(n),obj.sigma.g);
@@ -153,7 +155,7 @@ classdef Economy
             
             
             parfor(i=1:n_b_states,nworkers)
-                
+            
                 [n, id_br, id_bf] = ind2sub(n_b_states_size,i);
                 
                 [p(i), br_s(i),...
@@ -192,7 +194,7 @@ classdef Economy
                 - obj.q.*obj.bf);
             obj.cf(obj.cf<0) = 0;
             
-            obj.g = obj.tc*(obj.cr + obj.cf) + obj.q.*obj.bg - ...
+            obj.g = obj.A + obj.tc*(obj.cr + obj.cf) + obj.q.*obj.bg - ...
                 (obj.extended_grid.b_r + obj.extended_grid.b_f);
             obj.g(obj.g<0) = 0;
             
@@ -270,7 +272,7 @@ classdef Economy
             
             % government
             
-            num_g = (obj.tc/(1+obj.tc))*...
+            num_g = obj.A + (obj.tc/(1+obj.tc))*...
                 ((zt1.*bsxfun(@times,(1+rt1),grid_r) + ...
                 wt1 - zt1.*qt1.*brt1) + ...
                 ((1+rt1).*(repmat(obj.e.f,1,l_grid_g) + ...
@@ -281,13 +283,13 @@ classdef Economy
             valid_g(1) = 0;
             
             % min price where the denominator is still positive
-            min_feasible_price_g = ( - obj.tc*...
+            min_feasible_price_g = (-obj.A - obj.tc*...
                 ((1+rt)*brt_1 + wt + ...
                 (1+rt)*(eft + bft_1)) + ...
                 (1+obj.tc)*bgt_1 ) ./ grid_g';
             
             
-            denom_g_0 = (obj.tc/(1+obj.tc))*...
+            denom_g_0 = obj.A + (obj.tc/(1+obj.tc))*...
                 (((1+rt)*brt_1 + wt) + ...
                 ((1+rt)*(eft + bft_1))) - ...
                 bgt_1;

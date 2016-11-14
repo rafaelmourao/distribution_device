@@ -40,13 +40,14 @@ param.sigma.g = 2;                                        %Utility function para
 param.phi = .1;                                         %Probability of redemption (Arellano)
 param.lambda = 1;                                         %Government preference parameter: foreigners relative to residents
 param.tc = .2;                                            %Tax rate over CONSUMPTION
+param.A = 2;                                              % Fixed income stream
 
 %Firm
 param.alpha = .3;                                         %Participation of capital on productio
-param.rho = .5;                                           %Elasticity of Substitution between capital and labor is 1/2 (=1/(1-rho))
+param.rho = -.5;                                           %Elasticity of Substitution between capital and labor is 1/2 (=1/(1-rho))
 
 %Foreigner wealth evolution
-param.e.f = [10;20;30];
+param.e.f = [1;2;3];
 
 %Transition Matrix
 param.prob = [.4 .5 .1;.3 .4 .3;.1 .5 .4];                %Construction od the Probability matrix
@@ -57,7 +58,7 @@ param.n_states = size(param.prob,1);                            %Numbers of Stat
 %Public Bonds
 param.min_b = 0;                                          %Minimum value for bonds
 param.max_b = 1;                                         %Maximum value for bonds
-param.n_bonds = 3;                                       %Quantity of points on the grid for the investors
+param.n_bonds = 20;                                       %Quantity of points on the grid for the investors
 
 %%
 
@@ -72,7 +73,7 @@ while dist > epsilon && t <= 10000
     t = t+1;
     
     old_iter = iter;
-    iter = iter.update(20);
+    iter = iter.update();
 
     time = toc;
     dist = max(abs(iter.Vo(:) - old_iter.Vo(:)));
