@@ -94,12 +94,12 @@ classdef Economy
             %obj.br = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);          %BONDS policy funtion for RESIDENTS
             obj.br = reshape(kron(obj.grid.r_aux,[1,1,1]),...
                 [obj.n_states,obj.n_bonds,obj.n_bonds]);
-%             obj.bf = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);          %BONDS policy funtion for FOREIGNERS
+            %             obj.bf = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);          %BONDS policy funtion for FOREIGNERS
             obj.bf = reshape(kron(obj.grid.f_aux,[1,1,1]),...
                 [obj.n_states,obj.n_bonds,obj.n_bonds]);
-
+            
             %Government
-%             obj.bg = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);     %     %BONDS policy funtion for the GOVERNMENT
+            %             obj.bg = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);     %     %BONDS policy funtion for the GOVERNMENT
             obj.bg = obj.br + obj.bf;
             obj.g = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);            %PUBLIC EXPENDITURE policy funtion for the GOVERNMENT
             obj.z = ones(obj.n_states,obj.n_bonds,obj.n_bonds);       %DEFAULT policy funtion for the GOVERNMENT
@@ -230,25 +230,51 @@ classdef Economy
         end
         
         function [p, br_s, bf_s, bg_s] = Solution(obj, n, id_br, id_bf)
+            % This function solves the government and consumers
+            % optimization problem. It selects the highest total quantity
+            % bond portfolio where the highest price both consumers accept
+            % to buy is lower than the lowest price the government accepts.
             
             % Default (corner) solution
-            
             p = 0;
             br_s = 0;
             bf_s = 0;
             bg_s = 0;
             
-            % VARIABLES NEEDED
+            eq_price_g = eq_prices_government(obj, n, id_br, id_bf);
+            eq_price_r = eq_prices_residents(obj, n, id_br, id_bf);
+            eq_price_f = eq_prices_foreigners(obj, n, id_br, id_bf);
             
-            %Grid
+            prices = min(eq_price_f,eq_price_r);
+            prices(eq_price_g > prices) = 0;
             
-            grid_r = obj.grid.r_aux;
-            grid_f = obj.grid.f_aux;
-            grid_g = obj.grid.b_g;
-            l_grid_g = length(grid_g);
+            [~, sorted_bonds] = sort(obj.grid.b_g,2,'descend');
+            for i = sorted_bonds
+                % Accept solution if price is positive and finite
+                % If none found, solution is the corner (0,0) solution with
+                % zero price
+                if ( prices(i) > 0 && isfinite(prices(i)))
+                    p = prices(i);
+                    br_s = obj.grid.r_aux(i);
+                    bf_s = obj.grid.f_aux(i);
+                    bg_s = obj.grid.b_g(i);
+                    break
+                end
+            end
+            
+            
+        end
+        
+        function eq_price_g = eq_prices_government(obj, n, id_br, id_bf)
+            % Calculation of the minimal positive price the government may accept
+            % to sell the combination of bonds through a bisection
+            % procedure. Equals infinity for the cases where the government
+            % wouldn't accept any price (and 0,0)
+            
+            % Variables
             
             % Past and present
-            
+            probt = obj.prob(n,:);
             brt_1 = obj.br(n, id_br, id_bf);
             bft_1 = obj.bf(n, id_br, id_bf);
             bgt_1 = obj.bg(n, id_br, id_bf);
@@ -257,182 +283,185 @@ classdef Economy
             eft = obj.e.f(n);
             
             % Future
-            
-            bgt1 = obj.bg(:,:);
             rt1 = obj.r(:,:);
             wt1 = obj.w(:,:);
             qt1 = obj.q(:,:);
             zt1 = obj.z(:,:);
             brt1 = obj.br(:,:);
             bft1 = obj.bf(:,:);
+            bgt1 = obj.bg(:,:);
             
-            % ALGORITHM
             
-            % government
+            grid_r = obj.grid.r_aux;
+            grid_f = obj.grid.f_aux;
+            grid_g = obj.grid.b_g;
+            
             
             num_g = (obj.tc/(1+obj.tc))*...
                 ((zt1.*bsxfun(@times,(1+rt1),grid_r) + ...
                 wt1 - zt1.*qt1.*brt1) + ...
-                ((1+rt1).*(repmat(obj.e.f,1,l_grid_g) + ...
-                bsxfun(@times,zt1,grid_f)) - zt1.*qt1.*bft1)) + ...
+                (bsxfun(@times,(1+rt1),obj.e.f) + ...
+                bsxfun(@times,zt1,grid_f) - zt1.*qt1.*bft1)) + ...
                 zt1.*(qt1.*bgt1 - repmat(grid_g,obj.n_states,1));
+            
+            % Disregard cases where the numerator is negative independently
+            % of prices, and the (0,0) portfolio, which is the default
+            % solution
             
             valid_g = all(num_g > 0);
             valid_g(1) = 0;
-            
-            % min price where the denominator is still positive
-            min_feasible_price_g = ( - obj.tc*...
-                ((1+rt)*brt_1 + wt + ...
-                (1+rt)*(eft + bft_1)) + ...
-                (1+obj.tc)*bgt_1 ) ./ grid_g';
-            
             
             denom_g_0 = (obj.tc/(1+obj.tc))*...
                 (((1+rt)*brt_1 + wt) + ...
                 ((1+rt)*(eft + bft_1))) - ...
                 bgt_1;
-                        
+            
             grid_g_valid = grid_g(valid_g);
-            zt1_g_valid = zt1(:,valid_g);
-            num_g_valid = num_g(:,valid_g);
+            euler_denom_g_valid = @(p) (denom_g_0 + ...
+                (1/(1+obj.tc))*p.*grid_g_valid).^-obj.sigma.g;
             
-            denom_g = @(p) denom_g_0 + ...
-                (1/(1+obj.tc))*p.*grid_g_valid';
+            euler_num_g = obj.beta*(probt*(zt1.*(num_g.^-obj.sigma.g)));
+            euler_num_g(any(num_g)<0) = NaN; % just in case
+            euler_num_g_valid = euler_num_g(valid_g);
             
-            ratio_g = @(p) Euler_ratio(obj, n, zt1_g_valid,...
-                num_g_valid, denom_g(p),obj.sigma.g);
+            ratio_g = @(p) euler_num_g_valid ./ euler_denom_g_valid(p);
+           
             
-            pmax = obj.p_max;
-            while any(ratio_g(pmax) < pmax & pmax < 1000)
+            % Find price where euler denominator approaches zero
+            min_feasible_price_g = ( - obj.tc*...
+                ((1+rt)*brt_1 + wt + ...
+                (1+rt)*(eft + bft_1)) + ...
+                (1+obj.tc)*bgt_1 ) ./ grid_g;
+            
+            % Find a price where Euler ratio is below price or set a
+            % maximum of 1e4;
+            
+            pmax = max(min_feasible_price_g(valid_g)+5,5);
+            while any((ratio_g(pmax) < pmax) & pmax < 1e4)
                 pmax = 10*pmax;
             end
-                        
-            eq_price_g = Inf*ones(1,l_grid_g);
+            
+            % For invalid cases, set government equilibrium prices to Inf,
+            % otherwise find prices which equate euler ratio to the price
+            
+            eq_price_g = Inf*ones(size(valid_g));
             if any(valid_g)
                 eq_price_g(valid_g) = max(bisection(@(p) ratio_g(p) - abs(p),...
-                    min_feasible_price_g(valid_g), repmat(pmax,sum(valid_g),1)),0);
+                    min_feasible_price_g(valid_g), pmax),0);
             end
             
-            % residents
+        end
+        
+        function eq_price_r = eq_prices_residents(obj, n, id_br, id_bf)
+            % Calculation of the maximal prices the residents may accept to
+            % buy the bond portfolio. Equals infinity if resident doesn't
+            % buy anything, and zero is she accepts any positive price.
+            
+            % Variables
+            grid_r = obj.grid.r_aux;
+            
+            % Past and present
+            probt = obj.prob(n,:);
+            brt_1 = obj.br(n, id_br, id_bf);
+            rt = obj.r(n, id_br, id_bf);
+            wt = obj.w(n, id_br, id_bf);
+            
+            % Future
+            rt1 = obj.r(:,:);
+            wt1 = obj.w(:,:);
+            qt1 = obj.q(:,:);
+            zt1 = obj.z(:,:);
+            brt1 = obj.br(:,:);
             
             num_r = ((1+rt1).^(-1/obj.sigma.r)).*...
                 (zt1.*bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1);
             
-            % max price where the denominator is still positive
-            max_feasible_price_r = ( (1+rt)*brt_1 + wt ) ./ grid_r' ;
+            euler_num_r = obj.beta*(probt*(zt1.*(num_r.^-obj.sigma.r)));
+            euler_num_r(any(num_r)<0) = NaN;
             
-            denom_r_0 = ((1+rt)*brt_1 + wt);
-            ratio_r_0 = Euler_ratio(obj, n, zt1,...
-                num_r, denom_r_0,obj.sigma.r);
+            denom_r_0 = (1+rt)*brt_1 + wt;
+            ratio_r_0 = euler_num_r ./ (denom_r_0.^-obj.sigma.r);
             
-            valid_r = ~(isnan(ratio_r_0) | ratio_r_0 < 1e-6 | grid_r' == 0);
+            % Disregard cases where the ratio is not well defined
+            % independent of prices, and all portfolios where the resident
+            % buys no bonds
+            
+            valid_r = ~(isnan(ratio_r_0) | ratio_r_0 < 1e-6 | grid_r == 0);
             valid_r(1) = 0;
             
             grid_r_valid = grid_r(valid_r);
-            num_r_valid = num_r(:,valid_r);
-            zt1_r_valid = zt1(:,valid_r);
+            euler_num_r_valid = euler_num_r(valid_r);
             
-            denom_r = @(p) (denom_r_0 - p.*grid_r_valid');
-            ratio_r = @(p) Euler_ratio(obj, n, zt1_r_valid,...
-                num_r_valid, denom_r(p),obj.sigma.r);
+            euler_denom_r = @(p) (denom_r_0 - p.*grid_r_valid).^-obj.sigma.r;
+            ratio_r = @(p) euler_num_r_valid ./ euler_denom_r(p);
             
+            % max price where the denominator is still positive (ratio will
+            % be always lower than price in these cases)
+            max_feasible_price_r = ( (1+rt)*brt_1 + wt ) ./ grid_r ;
             
-            eq_price_r = -Inf*ones(1,l_grid_g);
+            eq_price_r = -Inf*ones(size(valid_r));
             if any(valid_r)
                 eq_price_r(valid_r) = bisection(@(p) ratio_r(p) - abs(p),...
                     0,max_feasible_price_r(valid_r));
             end
-            eq_price_r(grid_r == 0) = 1e6;
+            eq_price_r(grid_r == 0) = Inf;
+        end
+        
+        function eq_price_f = eq_prices_foreigners(obj, n, id_br, id_bf)
+            % Calculation of the maximal prices the foreigner may accept to
+            % buy the bond portfolio. Equals infinity if foreigner doesn't
+            % buy anything, and zero is she accepts any positive price.
             
-            % foreigners
+            % Variables
+            grid_f = obj.grid.f_aux;
+            l_grid_g = length(grid_f);
+            
+            % Past and present
+            probt = obj.prob(n,:);
+            bft_1 = obj.br(n, id_br, id_bf);
+            rt = obj.r(n, id_br, id_bf);
+            
+            % Future
+            rt1 = obj.r(:,:);
+            qt1 = obj.q(:,:);
+            zt1 = obj.z(:,:);
+            bft1 = obj.br(:,:);
+            eft = obj.e.f(n);
             
             num_f = (1+rt1).^(-1/obj.sigma.f).*...
                 ((1+rt1).*(repmat(obj.e.f,1,l_grid_g) +...
                 bsxfun(@times,zt1,grid_f)) - zt1.*qt1.*bft1);
             
-            % max price where the denominator is still positive
-            max_feasible_price_f = ( (1+rt)*(eft + bft_1) ) ./ grid_f';
+            euler_num_f = obj.beta*(probt*(zt1.*(num_f.^-obj.sigma.f)));
+            euler_num_f(any(num_f)<0) = NaN;
             
             denom_f_0 = ((1+rt)*(eft + bft_1));
-            ratio_f_0 = Euler_ratio(obj, n, zt1,...
-                num_f, denom_f_0, obj.sigma.f);
+            ratio_f_0 = euler_num_f ./ (denom_f_0.^-obj.sigma.f);
             
-            valid_f = ~(isnan(ratio_f_0) | ratio_f_0 < 1e-6 | grid_f' == 0);
+            % Disregard cases where the ratio is not well defined
+            % independent of prices, and all portfolios where the foreigner
+            % buys no bonds
+            valid_f = ~(isnan(ratio_f_0) | ratio_f_0 < 1e-6 | grid_f == 0);
             valid_f(1) = 0;
             
             grid_f_valid = grid_f(valid_f);
-            num_f_valid = num_f(:,valid_f);
-            zt1_f_valid = zt1(:,valid_f);
+            euler_num_f_valid = euler_num_f(valid_f);
             
-            denom_f = @(p) (denom_f_0 - p.*grid_f_valid');
-            ratio_f = @(p) Euler_ratio(obj, n, zt1_f_valid,...
-                num_f_valid, denom_f(p), obj.sigma.f);
+            euler_denom_f = @(p) (denom_f_0 - p.*grid_f_valid).^-obj.sigma.f;
+            ratio_f = @(p) euler_num_f_valid./euler_denom_f(p);
             
+            % max price where the denominator is still positive (ratio will
+            % be always lower than price in these cases)
+            max_feasible_price_f = denom_f_0 ./ grid_f;
             
-            eq_price_f = -Inf*ones(1,l_grid_g);
+            eq_price_f = -Inf*ones(size(valid_f));
             if any(valid_f)
                 eq_price_f(valid_f) = bisection(@(p) ratio_f(p) - abs(p),...
                     0, max_feasible_price_f(valid_f));
             end
-            eq_price_f(grid_f == 0) = 1e6;
-            
-            % finding market equilibrium
-            
-            prices = min(eq_price_f,eq_price_r);
-            prices(eq_price_g > prices) = 0;
-            
-            [~, sorted_bonds] = sort(grid_g,2,'descend');
-            for i = sorted_bonds
-                if ( prices(i) > 0 )
-                    p = prices(i);
-                    br_s = grid_r(i);
-                    bf_s = grid_f(i);
-                    bg_s = grid_g(i);
-                    break
-                end
-            end
-        end
-        
-        function ratio = Euler_ratio(obj,n, zt1, x, y, sig)
-            
-            % Important remark: the 'x' refers to the NUMERATOR while the 'y' refers to
-            % the DENOMINATOR. The former is inouted as a 'n_states x length_grid'
-            % matriz and the later as a '1 x length_grid' vector.
-            
-            % VARIABLES NEEDED
-            
-            %Parameters
-            probt = obj.prob(n,:);
-            
-            % PROGRAM
-            
-            %ERROR FUNTION
-            %This function identifies where there is a problem with consumption (it
-            %can never be negative), for both vectors: 'x' and 'y'. They will be part
-            %of the numerator and denominator, respectively, of the euler equations.
-            %The first part identifies the coordinates where the denominator has
-            %negative values. The second part finds if there is any entry, for every
-            %state of nature in the future, where consumption might be negative; the
-            %whole column will be shut down.
-            
-            error_c = (y < 0) | any(x < 0)';
-            
-            numerator = obj.beta*(probt*(zt1.*(x.^-sig)))';
-            
-            denominator = y.^(-sig);
-            
-            %RATIO FUNCTION
-            %This function calculates the MRS. But if there is any negative consumtion
-            %on any of the parts used to calculate this ratio, will show up a 'NaN'
-            %(not a number) on that coordinate, for the '0/0' that would be calculated.
-            %The Matlab won't consider this coordinates with 'NaN' when trying to find
-            %the policy functions.
-            
-            ratio = numerator./denominator;
-            ratio(error_c) = NaN;
+            eq_price_f(grid_f == 0) = Inf;
             
         end
         
     end
-    
 end
