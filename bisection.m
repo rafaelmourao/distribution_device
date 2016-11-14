@@ -94,7 +94,7 @@ function [x, fx, exitFlag] = bisection(f,lb,ub,target,options)
 
 % --- Process inputs. ---
 % Set default values
-tolX    = 1e-5;
+tolX    = 1e-6;
 tolFun  = 0;
 if nargin == 5
     if isstruct(options)

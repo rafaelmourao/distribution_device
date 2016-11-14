@@ -277,7 +277,6 @@ classdef Economy
                 bsxfun(@times,zt1,grid_f)) - zt1.*qt1.*bft1)) + ...
                 zt1.*(qt1.*bgt1 - repmat(grid_g,obj.n_states,1));
             
-            
             valid_g = all(num_g > 0);
             valid_g(1) = 0;
             
