@@ -287,8 +287,8 @@ classdef Economy
             
             % In case of default, future interest rate and wages are the
             % default ones
-            rt1(~obj.z) = obj.extended_default_r(~obj.z);
-            wt1(~obj.z) = obj.extended_default_w(~obj.z);
+            rt1(~zt1) = obj.extended_default_r(~zt1);
+            wt1(~zt1) = obj.extended_default_w(~zt1);
             
             grid_r = obj.grid.r_aux;
             grid_f = obj.grid.f_aux;
@@ -375,8 +375,8 @@ classdef Economy
             
             % In case of default, future interest rate and wages are the
             % default ones
-            rt1(~obj.z) = obj.extended_default_r(~obj.z);
-            wt1(~obj.z) = obj.extended_default_w(~obj.z);
+            rt1(~zt1) = obj.extended_default_r(~zt1);
+            wt1(~zt1) = obj.extended_default_w(~zt1);
             
             num_r = ((1+rt1).^(-1/obj.sigma.r)).*...
                 (zt1.*bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1);
@@ -435,7 +435,7 @@ classdef Economy
             
             % In case of default, future interest rate and wages are the
             % default ones
-            rt1(~obj.z) = obj.extended_default_r(~obj.z);
+            rt1(~zt1) = obj.extended_default_r(~zt1);
             
             num_f = (1+rt1).^(-1/obj.sigma.f).*...
                 ((1+rt1).*(repmat(obj.e.f,1,l_grid_g) +...
