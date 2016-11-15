@@ -94,10 +94,10 @@ classdef Economy
             obj.kf = repmat(obj.e.f,[1,obj.n_bonds,obj.n_bonds]);           %CAPITAL policy funtion for FOREIGNERS
             
             %obj.br = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);          %BONDS policy funtion for RESIDENTS
-            obj.br = reshape(kron(obj.grid.r_aux,[1,1,1]),...
+            obj.br = reshape(kron(obj.grid.r_aux,ones(1,obj.n_states)),...
                 [obj.n_states,obj.n_bonds,obj.n_bonds]);
             %             obj.bf = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);          %BONDS policy funtion for FOREIGNERS
-            obj.bf = reshape(kron(obj.grid.f_aux,[1,1,1]),...
+            obj.bf = reshape(kron(obj.grid.f_aux,ones(1,obj.n_states)),...
                 [obj.n_states,obj.n_bonds,obj.n_bonds]);
             
             %Government
@@ -115,7 +115,7 @@ classdef Economy
             obj.w = (1-obj.alpha)*((obj.alpha*((obj.kr+obj.kf).^obj.rho)...
                 + (1-obj.alpha)).^(1/obj.rho-1));           %Wage
             
-            obj.q = ones(obj.n_states,obj.n_bonds,obj.n_bonds);           %Price of Public Bond
+            obj.q = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);           %Price of Public Bond
             
             %% Default Outcomes
             
@@ -262,9 +262,7 @@ classdef Economy
                     bg_s = obj.grid.b_g(i);
                     break
                 end
-            end
-            
-            
+            end           
         end
         
         function eq_price_g = eq_prices_government(obj, n, id_br, id_bf)
@@ -340,7 +338,7 @@ classdef Economy
             % maximum of 1e4;
             
             pmax = max(min_feasible_price_g(valid_g)+.5,.5);
-            while any((ratio_g(pmax) > pmax) & pmax < 1000)
+            while any((ratio_g(pmax) > pmax) & pmax < 100)
                 pmax = 5*pmax;
             end
              
