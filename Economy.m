@@ -36,8 +36,10 @@ classdef Economy
         g
     end
     
-    properties
+    properties(Access = private)
         extended_grid
+        extended_default_r
+        extended_default_w
     end
     
     methods
@@ -135,7 +137,10 @@ classdef Economy
                 obj.default.W(n) =  Utility_Function(obj.default.cr(n),obj.sigma.r) +...
                     obj.lambda*Utility_Function(obj.default.cf(n),obj.sigma.f) ...
                     +  Utility_Function(obj.default.g(n),obj.sigma.g);
-                
+                obj.extended_default_r = repmat(obj.default.r,...
+                    1,obj.n_bonds*obj.n_bonds);
+                obj.extended_default_w = repmat(obj.default.w,...
+                    1,obj.n_bonds*obj.n_bonds);
             end
         end
         
@@ -155,7 +160,7 @@ classdef Economy
             
             
             parfor(i=1:n_b_states,nworkers)
-            
+                
                 [n, id_br, id_bf] = ind2sub(n_b_states_size,i);
                 
                 [p(i), br_s(i),...
@@ -218,17 +223,6 @@ classdef Economy
             [def_states, ~] = find(def); % retrieving the states of all default occ.
             obj.z(def) = 0;
             obj.Vo(def) = obj.Vd(def_states);
-            obj.r(def) = obj.default.r(def_states);
-            obj.w(def) = obj.default.w(def_states);
-            obj.cr(def) = obj.default.cr(def_states);
-            obj.cf(def) = obj.default.cf(def_states);
-            obj.g(def) = obj.default.g(def_states);
-            obj.q(def) = 0;
-            obj.br(def) = 0;
-            obj.bf(def) = 0;
-            obj.bg(def) = 0;
-            obj.kr(def) = 0;
-            obj.kf(def) = obj.e.f(def_states);
         end
         
         function [p, br_s, bf_s, bg_s] = Solution(obj, n, id_br, id_bf)
@@ -262,7 +256,7 @@ classdef Economy
                     bg_s = obj.grid.b_g(i);
                     break
                 end
-            end           
+            end
         end
         
         function eq_price_g = eq_prices_government(obj, n, id_br, id_bf)
@@ -275,9 +269,9 @@ classdef Economy
             
             % Past and present
             probt = obj.prob(n,:);
-            brt_1 = obj.br(n, id_br, id_bf);
-            bft_1 = obj.bf(n, id_br, id_bf);
-            bgt_1 = obj.bg(n, id_br, id_bf);
+            brt_1 = obj.grid.b_r(id_br);
+            bft_1 = obj.grid.b_f(id_bf);
+            bgt_1 = brt_1 + bft_1;
             rt = obj.r(n, id_br, id_bf);
             wt = obj.w(n, id_br, id_bf);
             eft = obj.e.f(n);
@@ -291,6 +285,10 @@ classdef Economy
             bft1 = obj.bf(:,:);
             bgt1 = obj.bg(:,:);
             
+            % In case of default, future interest rate and wages are the
+            % default ones
+            rt1(~obj.z) = obj.extended_default_r(~obj.z);
+            wt1(~obj.z) = obj.extended_default_w(~obj.z);
             
             grid_r = obj.grid.r_aux;
             grid_f = obj.grid.f_aux;
@@ -326,7 +324,7 @@ classdef Economy
             euler_num_g_valid = euler_num_g(valid_g);
             
             ratio_g = @(p) euler_num_g_valid ./ euler_denom_g_valid(p);
-           
+            
             
             % Find price where euler denominator approaches zero
             min_feasible_price_g = ( -obj.A - obj.tc*...
@@ -341,7 +339,7 @@ classdef Economy
             while any((ratio_g(pmax) > pmax) & pmax < 100)
                 pmax = 5*pmax;
             end
-             
+            
             % For invalid cases, set government equilibrium prices to Inf,
             % otherwise find prices which equate euler ratio to the price
             
@@ -364,7 +362,7 @@ classdef Economy
             
             % Past and present
             probt = obj.prob(n,:);
-            brt_1 = obj.br(n, id_br, id_bf);
+            brt_1 = obj.grid.b_r(id_br);
             rt = obj.r(n, id_br, id_bf);
             wt = obj.w(n, id_br, id_bf);
             
@@ -374,6 +372,11 @@ classdef Economy
             qt1 = obj.q(:,:);
             zt1 = obj.z(:,:);
             brt1 = obj.br(:,:);
+            
+            % In case of default, future interest rate and wages are the
+            % default ones
+            rt1(~obj.z) = obj.extended_default_r(~obj.z);
+            wt1(~obj.z) = obj.extended_default_w(~obj.z);
             
             num_r = ((1+rt1).^(-1/obj.sigma.r)).*...
                 (zt1.*bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1);
@@ -420,7 +423,7 @@ classdef Economy
             
             % Past and present
             probt = obj.prob(n,:);
-            bft_1 = obj.br(n, id_br, id_bf);
+            bft_1 = obj.grid.b_f(id_bf);
             rt = obj.r(n, id_br, id_bf);
             
             % Future
@@ -429,6 +432,10 @@ classdef Economy
             zt1 = obj.z(:,:);
             bft1 = obj.br(:,:);
             eft = obj.e.f(n);
+            
+            % In case of default, future interest rate and wages are the
+            % default ones
+            rt1(~obj.z) = obj.extended_default_r(~obj.z);
             
             num_f = (1+rt1).^(-1/obj.sigma.f).*...
                 ((1+rt1).*(repmat(obj.e.f,1,l_grid_g) +...
