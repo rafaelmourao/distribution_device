@@ -36,7 +36,7 @@ classdef Economy
         g
     end
     
-    properties
+    properties (Hidden = true)
         extended_grid
         extended_default_r
         extended_default_w
@@ -138,9 +138,9 @@ classdef Economy
                     obj.lambda*Utility_Function(obj.default.cf(n),obj.sigma.f) ...
                     +  Utility_Function(obj.default.g(n),obj.sigma.g);
                 obj.extended_default_r = repmat(obj.default.r,...
-                    1,obj.n_bonds*obj.n_bonds);
+                    [1,obj.n_bonds*obj.n_bonds]);
                 obj.extended_default_w = repmat(obj.default.w,...
-                    1,obj.n_bonds*obj.n_bonds);
+                    [1,obj.n_bonds*obj.n_bonds]);
             end
         end
         

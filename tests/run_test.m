@@ -1,7 +1,7 @@
 % plot figures
 addpath('../')
 
-param4
+param2
 
 iter = Economy(param);
 
@@ -14,7 +14,7 @@ while dist > epsilon && t <= 10000
     t = t+1;
     
     old_iter = iter;
-    iter = iter.update(0);
+    iter = iter.update();
 
     time = toc;
     dist = max(abs(iter.Vo(:) - old_iter.Vo(:)));
@@ -24,3 +24,7 @@ while dist > epsilon && t <= 10000
     fprintf('Default proportion: %.4f\n',1-mean(iter.z(:))) 
     
 end
+
+plot_prices(iter)
+plot_quantities(iter)
+plot_default(iter)
