@@ -1,7 +1,7 @@
 % plot figures
 addpath('../')
 
-param3
+param4
 
 iter = Economy(param);
 
@@ -14,7 +14,7 @@ while dist > epsilon && t <= 10000
     t = t+1;
     
     old_iter = iter;
-    iter = iter.update(20);
+    iter = iter.update(0);
 
     time = toc;
     dist = max(abs(iter.Vo(:) - old_iter.Vo(:)));
