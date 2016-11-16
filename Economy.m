@@ -36,7 +36,7 @@ classdef Economy
         g
     end
     
-    properties(Access = private)
+    properties
         extended_grid
         extended_default_r
         extended_default_w
@@ -169,8 +169,8 @@ classdef Economy
                 
                 loc_br_s = ( obj.grid.b_r == br_s(i) );
                 loc_bf_s = ( obj.grid.b_f == bf_s(i) );
-                next_Vo(i) = obj.Vo(n,loc_br_s,loc_bf_s);
-                
+                % Expected value for next period
+                next_Vo(i) = obj.prob(n,:)*obj.Vo(:,loc_br_s,loc_bf_s);
             end
             
             obj.q = p;               %Equilibrium price for the Bonds' market
@@ -207,9 +207,7 @@ classdef Economy
                 obj.lambda*Utility_Function(obj.cf,obj.sigma.f) + ...
                 Utility_Function(obj.g,obj.sigma.g);
             
-            for i = 1:obj.n_bonds
-                obj.Vnd(:,:,i) = obj.Wnd(:,:,i) + obj.beta*(obj.prob * next_Vo(:,:,i)); %%%
-            end
+            obj.Vnd = obj.Wnd + obj.beta*next_Vo;
             
             obj.Vd = obj.default.W + obj.beta*obj.prob*...
                 (obj.phi * obj.Vo(:,1,1) + (1-obj.phi) * obj.Vd);
