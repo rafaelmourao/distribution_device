@@ -1,5 +1,6 @@
 % plot figures
 addpath('../')
+addpath('../plots')
 
 param2
 
