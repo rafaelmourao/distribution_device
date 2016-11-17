@@ -61,3 +61,8 @@ while dist > epsilon && t <= 10000
     disp(iter.q(1:10))
     fprintf('Default proportion: %.4f\n',1-mean(iter.z(:))) 
 end
+
+addpath('plots/')
+plot_quantities(iter)
+plot_default(iter)
+plot_prices(iter)
