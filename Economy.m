@@ -1,42 +1,44 @@
 classdef Economy
     properties
-        % economy parameters
-        beta
-        sigma
-        phi
-        lambda
-        tc
-        A
-        alpha
-        rho
-        e
-        prob
-        n_states
-        grid % structure that defines the grid of bonds, optional
-        n_bonds
-        default
-        p_max
+        % Necessary economy parameters
+        beta %Intertemporal discount rate
+        sigma % Utility function parameter: risk aversion (structure)
+        phi %Probability of redemption (Arellano)
+        lambda %Government preference parameter: foreigners relative to residents
+        tc %Tax rate over CONSUMPTION
+        A % Fixed income stream for the government
+        alpha %Participation of capital on production
+        rho % Elasticity of Substitution between capital and labor (=1/(1-rho))
+        e % shocks to the consumers endowment
+        prob % transition matrix
+        n_bonds % number of bonds for sale
         
-        % iteraction variables
-        Vd
-        Vnd
-        Vo
-        Wnd
-        cr
-        cf
-        kr
-        kf
-        br
-        bf
-        bg
-        z
-        r
-        w
-        q
-        g
+        % Dependent variables
+        n_states % number of states
+        grid % structure that defines the grid of bonds, optional
+        default % default outcomes (as below)
+        
+        % Iteration variables
+        Vd % Value function in case of default
+        Vnd % Value function in case of no default
+        Vo % Value function
+        Wnd % Welfare in case of no default
+        cr % Resident consumption policy function in case of no default
+        cf % Foreign consumption policy function in case of no default
+        kr % Resident capital policy function in case of no default
+        kf % Foreign capital policy function in case of no default
+        br % Resident bond policy function holdings in case of no default
+        bf % Foreign bond policy function holdings in case of no default
+        bg % Government bond policy function holdings in case of no default
+        z % Government default policy function
+        r % Interest rates without default
+        w % Wages without default
+        q % Prices without default
+        g % Government spending without default
     end
     
-    properties
+    properties (Hidden = true)
+        % Extended arrays to conform with policy function dimensions
         extended_grid
         extended_default_r
         extended_default_w
@@ -46,7 +48,6 @@ classdef Economy
         
         function obj = Economy(param)
             % Setting parameters
-            obj.p_max = param.p_max;
             obj.beta = param.beta;
             obj.sigma = param.sigma;
             obj.phi = param.phi;
@@ -57,8 +58,11 @@ classdef Economy
             obj.rho = param.rho;
             obj.e = param.e;
             obj.prob = param.prob;
-            obj.n_states = param.n_states;
             obj.n_bonds = param.n_bonds;
+            
+            % Setting dependent properties
+            
+            obj.n_states = size(obj.prob,1);        %Numbers of States of Nature
             
             % Constructing grid
             
@@ -134,9 +138,9 @@ classdef Economy
                 obj.default.cr(n) = (1/(1+obj.tc))*obj.default.w(n);
                 obj.default.cf(n) = (1/(1+obj.tc))*(1+obj.default.r(n))*obj.e.f(n);
                 obj.default.g(n) = obj.A + obj.tc*(obj.default.cr(n) + obj.default.cf(n));
-                obj.default.W(n) =  Utility_Function(obj.default.cr(n),obj.sigma.r) +...
-                    obj.lambda*Utility_Function(obj.default.cf(n),obj.sigma.f) ...
-                    +  Utility_Function(obj.default.g(n),obj.sigma.g);
+                obj.default.W(n) =  utility_function(obj.default.cr(n),obj.sigma.r) +...
+                    obj.lambda*utility_function(obj.default.cf(n),obj.sigma.f) ...
+                    +  utility_function(obj.default.g(n),obj.sigma.g);
                 obj.extended_default_r = repmat(obj.default.r,...
                     1,obj.n_bonds*obj.n_bonds);
                 obj.extended_default_w = repmat(obj.default.w,...
@@ -203,9 +207,9 @@ classdef Economy
                 (obj.extended_grid.b_r + obj.extended_grid.b_f);
             obj.g(obj.g<0) = 0;
             
-            obj.Wnd = Utility_Function(obj.cr,obj.sigma.r) + ...
-                obj.lambda*Utility_Function(obj.cf,obj.sigma.f) + ...
-                Utility_Function(obj.g,obj.sigma.g);
+            obj.Wnd = utility_function(obj.cr,obj.sigma.r) + ...
+                obj.lambda*utility_function(obj.cf,obj.sigma.f) + ...
+                utility_function(obj.g,obj.sigma.g);
             
             obj.Vnd = obj.Wnd + obj.beta*next_Vo;
             
@@ -219,8 +223,8 @@ classdef Economy
             % check where there is default
             def = bsxfun(@lt,obj.Vnd,obj.Vd);
             [def_states, ~] = find(def); % retrieving the states of all default occ.
-            obj.z(def) = 0;
-            obj.Vo(def) = obj.Vd(def_states);
+            obj.z(def) = 0; % updating default decision
+            obj.Vo(def) = obj.Vd(def_states); % updating policy function
         end
         
         function [p, br_s, bf_s, bg_s] = Solution(obj, n, id_br, id_bf)
@@ -471,4 +475,8 @@ classdef Economy
         end
         
     end
+end
+
+function f = utility_function(x, sigma)
+f = (x.^(1-sigma) - 1)/(1 - sigma);
 end
