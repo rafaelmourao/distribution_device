@@ -4,6 +4,8 @@
 
 param = [];
 
+param.has_default = true;
+
 %Consumers
 param.beta = .8;      %Intertemporal discount rate
 param.sigma.r = 2;    %Utility function parameter: risk aversion
@@ -17,26 +19,26 @@ param.tc = .2;   %Tax rate over CONSUMPTION
 param.A = 1;     %Fixed income stream
 
 %Firm
-param.alpha = .3;            %Participation of capital on productio
-param.rho = .5;              %Elasticity of Substitution between capital and labor is 1/2 (=1/(1-rho))
+param.alpha = .2;            %Participation of capital on productio
+param.rho = -.5;              %Elasticity of Substitution between capital and labor is 1/2 (=1/(1-rho))
 
 %Foreigner wealth evolution
-% param.e.f = [1;2;3];
-param.e.f = [0.1;.3;0.5;2;5];
+param.e.f = [1;2;5];
+% param.e.f = [0.1;.3;0.5;2;5];
 
 %Transition Matrix
-% param.prob = [.4 .5 .1;.3 .4 .3;.1 .5 .4];
-param.prob = [.2 .3 .3 .1 .1;...
-              .1 .4 .3 .1 .1;...
-              .1 .3 .3 .2 .1;...
-              .1 .2 .2 .3 .2;...
-              .1 .2 .2 .2 .3];     %Construction od the Probability matrix
+param.prob = [.4 .5 .1;.3 .4 .3;.1 .5 .4];
+% param.prob = [.2 .3 .3 .1 .1;...
+%               .1 .4 .3 .1 .1;...
+%               .1 .3 .3 .2 .1;...
+%               .1 .2 .2 .3 .2;...
+%               .1 .2 .2 .2 .3];     %Construction od the Probability matrix
 
 % GRID
 
 %Public Bonds
 param.min_b = 0;   %Minimum value for bonds
-param.max_b = .2;  %Maximum value for bonds
+param.max_b = .25;  %Maximum value for bonds
 param.n_bonds = 15;  %Quantity of points on the grid for the investors
 
 %% ITERATIONS
@@ -47,6 +49,7 @@ epsilon = 1e-3;                                     %Tolerance level for
 dist = 100;                                         %Distance between previous and current price and bond functions
 t = 1;                                              %Number of interations
 
+hah = tic;
 while dist > epsilon && t <= 10000
     tic
     t = t+1;
@@ -61,6 +64,7 @@ while dist > epsilon && t <= 10000
     disp(iter.q(1:10))
     fprintf('Default proportion: %.4f\n',1-mean(iter.z(:))) 
 end
+toc(hah)
 
 addpath('plots/')
 plot_quantities(iter)

@@ -1,6 +1,8 @@
 classdef Economy
     properties
         % Necessary economy parameters
+        has_default = true; % By default the model allows for default
+        
         beta %Intertemporal discount rate
         sigma % Utility function parameter: risk aversion (structure)
         phi %Probability of redemption (Arellano)
@@ -47,6 +49,11 @@ classdef Economy
     methods
         
         function obj = Economy(param)
+            
+            if isfield(param,'has_default') % if grid is supplied
+                obj.has_default = param.has_default;
+            end
+            
             % Setting parameters
             obj.beta = param.beta;
             obj.sigma = param.sigma;
@@ -153,31 +160,29 @@ classdef Economy
                 nworkers = 12;
             end
             
-            n_b_states = obj.n_states*obj.n_bonds^2;
-            n_b_states_size = [obj.n_states, obj.n_bonds, obj.n_bonds];
+            n_tot_bonds = obj.n_bonds^2;
+            tot_bonds_size = [obj.n_bonds, obj.n_bonds];
+            n_tot_bonds_size = [obj.n_states, obj.n_bonds, obj.n_bonds];
             
-            p = zeros(n_b_states_size);
-            br_s = zeros(n_b_states_size);
-            bf_s = zeros(n_b_states_size);
-            bg_s = zeros(n_b_states_size);
-            next_Vo = zeros(n_b_states_size);
+            p_s = zeros(n_tot_bonds_size);
+            br_s = zeros(n_tot_bonds_size);
+            bf_s = zeros(n_tot_bonds_size);
+            bg_s = zeros(n_tot_bonds_size);
+            next_Vo = zeros(n_tot_bonds_size);
             
             
-            parfor(i=1:n_b_states,nworkers)
+            parfor(i=1:n_tot_bonds,nworkers)
                 
-                [n, id_br, id_bf] = ind2sub(n_b_states_size,i);
+                [id_br, id_bf] = ind2sub(tot_bonds_size,i);
                 
-                [p(i), br_s(i),...
-                    bf_s(i), bg_s(i)] = ...
-                    Solution(obj, n, id_br, id_bf);
+                [p_s(:,i), id_s, br_s(:,i),...
+                    bf_s(:,i), bg_s(:,i)] = ...
+                    Solution(obj, id_br, id_bf);
                 
-                loc_br_s = ( obj.grid.b_r == br_s(i) );
-                loc_bf_s = ( obj.grid.b_f == bf_s(i) );
-                % Expected value for next period
-                next_Vo(i) = obj.prob(n,:)*obj.Vo(:,loc_br_s,loc_bf_s);
+                next_Vo(:,i) = diag(obj.prob*obj.Vo(:,id_s));
             end
             
-            obj.q = p;               %Equilibrium price for the Bonds' market
+            obj.q = p_s;               %Equilibrium price for the Bonds' market
             obj.br = br_s;                          %RESIDENTS demand for Bonds
             obj.bf = bf_s;                          %FOREIGNERS demand for Bonds
             obj.bg = bg_s;                          %GOVERNEMNT supply of Bonds
@@ -221,47 +226,53 @@ classdef Economy
             obj.Vo = obj.Vnd;
             
             % check where there is default
-            def = bsxfun(@lt,obj.Vnd,obj.Vd);
-            [def_states, ~] = find(def); % retrieving the states of all default occ.
-            obj.z(def) = 0; % updating default decision
-            obj.Vo(def) = obj.Vd(def_states); % updating policy function
+            if obj.has_default
+                def = bsxfun(@lt,obj.Vnd,obj.Vd);
+                [def_states, ~] = find(def); % retrieving the states of all default occ.
+                obj.z(def) = 0; % updating default decision
+                obj.Vo(def) = obj.Vd(def_states); % updating policy function
+            end
         end
         
-        function [p, br_s, bf_s, bg_s] = Solution(obj, n, id_br, id_bf)
+        function [p_s, id_s, br_s, bf_s, bg_s] = Solution(obj, id_br, id_bf)
             % This function solves the government and consumers
             % optimization problem. It selects the highest total quantity
             % bond portfolio where the highest price both consumers accept
             % to buy is lower than the lowest price the government accepts.
             
             % Default (corner) solution
-            p = 0;
-            br_s = 0;
-            bf_s = 0;
-            bg_s = 0;
+            p_s = zeros(obj.n_states,1);
+            id_s = ones(obj.n_states,1);
+            br_s = zeros(obj.n_states,1);
+            bf_s = zeros(obj.n_states,1);
+            bg_s = zeros(obj.n_states,1);
             
-            eq_price_g = eq_prices_government(obj, n, id_br, id_bf);
-            eq_price_r = eq_prices_residents(obj, n, id_br, id_bf);
-            eq_price_f = eq_prices_foreigners(obj, n, id_br, id_bf);
+            eq_price_g = eq_prices_government(obj, id_br, id_bf);
+            eq_price_r = eq_prices_residents(obj, id_br, id_bf);
+            eq_price_f = eq_prices_foreigners(obj, id_br, id_bf);
             
             prices = min(eq_price_f,eq_price_r);
             prices(eq_price_g > prices) = 0;
             
             [~, sorted_bonds] = sort(obj.grid.b_g,2,'descend');
-            for i = sorted_bonds
-                % Accept solution if price is positive and finite
-                % If none found, solution is the corner (0,0) solution with
-                % zero price
-                if ( prices(i) > 0 && isfinite(prices(i)))
-                    p = prices(i);
-                    br_s = obj.grid.r_aux(i);
-                    bf_s = obj.grid.f_aux(i);
-                    bg_s = obj.grid.b_g(i);
-                    break
+            for n = 1:obj.n_states
+                for i = sorted_bonds
+                    % Accept solution if price is positive and finite
+                    % If none found, solution is the corner (0,0) solution with
+                    % zero price
+                    if ( prices(n,i) > 0 && isfinite(prices(n,i)))
+                        id_s(n) = i;
+                        p_s(n) = prices(n,i);
+                        br_s(n) = obj.grid.r_aux(i);
+                        bf_s(n) = obj.grid.f_aux(i);
+                        bg_s(n) = obj.grid.b_g(i);
+                        break
+                    end
                 end
             end
         end
         
-        function eq_price_g = eq_prices_government(obj, n, id_br, id_bf)
+        function eq_price_g = eq_prices_government(obj, id_br, id_bf)
             % Calculation of the minimal positive price the government may accept
             % to sell the combination of bonds through a bisection
             % procedure. Equals infinity for the cases where the government
@@ -270,13 +281,12 @@ classdef Economy
             % Variables
             
             % Past and present
-            probt = obj.prob(n,:);
             brt_1 = obj.grid.b_r(id_br);
             bft_1 = obj.grid.b_f(id_bf);
             bgt_1 = brt_1 + bft_1;
-            rt = obj.r(n, id_br, id_bf);
-            wt = obj.w(n, id_br, id_bf);
-            eft = obj.e.f(n);
+            rt = obj.r(:,id_br, id_bf);
+            wt = obj.w(:,id_br, id_bf);
+            eft = obj.e.f;
             
             % Future
             rt1 = obj.r(:,:);
@@ -289,8 +299,10 @@ classdef Economy
             
             % In case of default, future interest rate and wages are the
             % default ones
-            rt1(~zt1) = obj.extended_default_r(~zt1);
-            wt1(~zt1) = obj.extended_default_w(~zt1);
+            if obj.has_default
+                rt1(~zt1) = obj.extended_default_r(~zt1);
+                wt1(~zt1) = obj.extended_default_w(~zt1);
+            end
             
             grid_r = obj.grid.r_aux;
             grid_f = obj.grid.f_aux;
@@ -311,42 +323,50 @@ classdef Economy
             
             valid_g = all(num_g > 0);
             valid_g(1) = 0;
+            valid_g = repmat(valid_g,[obj.n_states,1]);
             
             denom_g_0 = obj.A + (obj.tc/(1+obj.tc))*...
-                (((1+rt)*brt_1 + wt) + ...
-                ((1+rt)*(eft + bft_1))) - ...
-                bgt_1;
+                ((1+rt).*brt_1 + wt + ...
+                (1+rt).*(eft + bft_1)) - ...
+                bgt_1; % n_states * n_bonds^2
             
-            grid_g_valid = grid_g(valid_g);
-            euler_denom_g_valid = @(p) (denom_g_0 + ...
-                (1/(1+obj.tc))*p.*grid_g_valid).^-obj.sigma.g;
+            % Get the states and bonds for each valid case
+            [n_valid, b_id_valid] = find(valid_g);
             
-            euler_num_g = obj.beta*(probt*(zt1.*(num_g.^-obj.sigma.g)));
+            % Get the subset of valid cases
+            denom_g_0_valid =  denom_g_0(n_valid);
+            grid_g_valid = grid_g(b_id_valid);
+            euler_denom_g_valid = @(p) (denom_g_0_valid + ...
+                (1/(1+obj.tc))*p.*grid_g_valid').^-obj.sigma.g;
+            
+            euler_num_g = obj.beta*(obj.prob*(zt1.*(num_g.^-obj.sigma.g)));
             euler_num_g(any(num_g)<0) = NaN; % just in case
             euler_num_g_valid = euler_num_g(valid_g);
             
-            ratio_g = @(p) euler_num_g_valid ./ euler_denom_g_valid(p);
+            ratio_g = @(p) euler_num_g_valid./euler_denom_g_valid(p);
             
             
             % Find price where euler denominator approaches zero
-            min_feasible_price_g = ( -obj.A - obj.tc*...
-                ((1+rt)*brt_1 + wt + ...
-                (1+rt)*(eft + bft_1)) + ...
-                (1+obj.tc)*bgt_1 ) ./ grid_g;
+            min_feasible_price_g = bsxfun(@rdivide, -obj.A - obj.tc*...
+                ((1+rt).*brt_1 + wt + ...
+                (1+rt).*(eft + bft_1)) + ...
+                (1+obj.tc)*bgt_1, grid_g);
             
             % Find a price where Euler ratio is below price or set a
-            % maximum of 1e4;
+            % maximum of 100;
             
             pmax = max(min_feasible_price_g(valid_g)+.5,.5);
-            while any((ratio_g(pmax) > pmax) & pmax < 100)
-                pmax = 5*pmax;
+            higher = (ratio_g(pmax) > pmax);
+            while any(higher & pmax < 100)
+                pmax(higher) = 5*pmax(higher);
+                higher = (ratio_g(pmax) > pmax);
             end
             
             % For invalid cases, set government equilibrium prices to Inf,
             % otherwise find prices which equate euler ratio to the price
             
-            eq_price_g = Inf*ones(size(valid_g));
-            if any(valid_g)
+            eq_price_g = Inf*ones(size(rt1));
+            if ~isempty(n_valid)
                 eq_price_g(valid_g) = bisection(@(p) ratio_g(p) - p,...
                     min_feasible_price_g(valid_g), pmax);
                 eq_price_g(isnan(eq_price_g)) = Inf;
@@ -354,7 +374,7 @@ classdef Economy
             
         end
         
-        function eq_price_r = eq_prices_residents(obj, n, id_br, id_bf)
+        function eq_price_r = eq_prices_residents(obj, id_br, id_bf)
             % Calculation of the maximal prices the residents may accept to
             % buy the bond portfolio. Equals infinity if resident doesn't
             % buy anything, and zero is she accepts any positive price.
@@ -363,10 +383,9 @@ classdef Economy
             grid_r = obj.grid.r_aux;
             
             % Past and present
-            probt = obj.prob(n,:);
             brt_1 = obj.grid.b_r(id_br);
-            rt = obj.r(n, id_br, id_bf);
-            wt = obj.w(n, id_br, id_bf);
+            rt = obj.r(:, id_br, id_bf);
+            wt = obj.w(:, id_br, id_bf);
             
             % Future
             rt1 = obj.r(:,:);
@@ -377,44 +396,52 @@ classdef Economy
             
             % In case of default, future interest rate and wages are the
             % default ones
-            rt1(~zt1) = obj.extended_default_r(~zt1);
-            wt1(~zt1) = obj.extended_default_w(~zt1);
+            if obj.has_default
+                rt1(~zt1) = obj.extended_default_r(~zt1);
+                wt1(~zt1) = obj.extended_default_w(~zt1);
+            end
             
             num_r = ((1+rt1).^(-1/obj.sigma.r)).*...
                 (zt1.*bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1);
             
-            euler_num_r = obj.beta*(probt*(zt1.*(num_r.^-obj.sigma.r)));
+            euler_num_r = obj.beta*(obj.prob*(zt1.*(num_r.^-obj.sigma.r)));
             euler_num_r(any(num_r)<0) = NaN;
             
             denom_r_0 = (1+rt)*brt_1 + wt;
-            ratio_r_0 = euler_num_r ./ (denom_r_0.^-obj.sigma.r);
+            ratio_r_0 = bsxfun(@rdivide,euler_num_r,...
+                (denom_r_0.^-obj.sigma.r));
             
             % Disregard cases where the ratio is not well defined
             % independent of prices, and all portfolios where the resident
             % buys no bonds
             
-            valid_r = ~(isnan(ratio_r_0) | ratio_r_0 < 1e-6 | grid_r == 0);
-            valid_r(1) = 0;
+            valid_r = ~(isnan(ratio_r_0) | ratio_r_0 < 1e-6 | ...
+                repmat(grid_r,[obj.n_states,1]) == 0);
+            valid_r(:,1) = 0;
+            % Get the states and bonds for each valid case
+            [n_valid, b_id_valid] = find(valid_r);
             
-            grid_r_valid = grid_r(valid_r);
+            % Get the subset of valid cases
+            denom_r_0_valid =  denom_r_0(n_valid);
+            grid_r_valid = grid_r(b_id_valid);
             euler_num_r_valid = euler_num_r(valid_r);
             
-            euler_denom_r = @(p) (denom_r_0 - p.*grid_r_valid).^-obj.sigma.r;
+            euler_denom_r = @(p) (denom_r_0_valid - p.*grid_r_valid').^-obj.sigma.r;
             ratio_r = @(p) euler_num_r_valid ./ euler_denom_r(p);
             
             % max price where the denominator is still positive (ratio will
             % be always lower than price in these cases)
-            max_feasible_price_r = ( (1+rt)*brt_1 + wt ) ./ grid_r ;
+            max_feasible_price_r = bsxfun(@rdivide,((1+rt)*brt_1 + wt),grid_r) ;
             
-            eq_price_r = -Inf*ones(size(valid_r));
-            if any(valid_r)
+            eq_price_r = -Inf*ones(size(rt1));
+            if ~isempty(n_valid)
                 eq_price_r(valid_r) = bisection(@(p) ratio_r(p) - abs(p),...
                     0,max_feasible_price_r(valid_r));
             end
-            eq_price_r(grid_r == 0) = Inf;
+            eq_price_r(:,grid_r == 0) = Inf;
         end
         
-        function eq_price_f = eq_prices_foreigners(obj, n, id_br, id_bf)
+        function eq_price_f = eq_prices_foreigners(obj, id_br, id_bf)
             % Calculation of the maximal prices the foreigner may accept to
             % buy the bond portfolio. Equals infinity if foreigner doesn't
             % buy anything, and zero is she accepts any positive price.
@@ -424,53 +451,61 @@ classdef Economy
             l_grid_g = length(grid_f);
             
             % Past and present
-            probt = obj.prob(n,:);
             bft_1 = obj.grid.b_f(id_bf);
-            rt = obj.r(n, id_br, id_bf);
+            rt = obj.r(:, id_br, id_bf);
             
             % Future
             rt1 = obj.r(:,:);
             qt1 = obj.q(:,:);
             zt1 = obj.z(:,:);
             bft1 = obj.br(:,:);
-            eft = obj.e.f(n);
+            eft = obj.e.f;
             
             % In case of default, future interest rate and wages are the
             % default ones
-            rt1(~zt1) = obj.extended_default_r(~zt1);
+            if obj.has_default
+                rt1(~zt1) = obj.extended_default_r(~zt1);
+            end
             
             num_f = (1+rt1).^(-1/obj.sigma.f).*...
                 ((1+rt1).*(repmat(obj.e.f,1,l_grid_g) +...
                 bsxfun(@times,zt1,grid_f)) - zt1.*qt1.*bft1);
             
-            euler_num_f = obj.beta*(probt*(zt1.*(num_f.^-obj.sigma.f)));
+            euler_num_f = obj.beta*(obj.prob*(zt1.*(num_f.^-obj.sigma.f)));
             euler_num_f(any(num_f)<0) = NaN;
             
-            denom_f_0 = ((1+rt)*(eft + bft_1));
-            ratio_f_0 = euler_num_f ./ (denom_f_0.^-obj.sigma.f);
+            denom_f_0 = ((1+rt).*(eft + bft_1));
+            ratio_f_0 = bsxfun(@rdivide,euler_num_f,...
+                (denom_f_0.^-obj.sigma.f));
             
             % Disregard cases where the ratio is not well defined
             % independent of prices, and all portfolios where the foreigner
             % buys no bonds
-            valid_f = ~(isnan(ratio_f_0) | ratio_f_0 < 1e-6 | grid_f == 0);
+            valid_f = ~(isnan(ratio_f_0) | ratio_f_0 < 1e-6 | ...
+                repmat(grid_f,[obj.n_states,1]) == 0);
             valid_f(1) = 0;
+            % Get the states and bonds for each valid case
+            [n_valid, b_id_valid] = find(valid_f);
             
-            grid_f_valid = grid_f(valid_f);
+            % Get the subset of valid cases
+            denom_f_0_valid = denom_f_0(n_valid);
+            grid_f_valid = grid_f(b_id_valid)';
             euler_num_f_valid = euler_num_f(valid_f);
             
-            euler_denom_f = @(p) (denom_f_0 - p.*grid_f_valid).^-obj.sigma.f;
+            
+            euler_denom_f = @(p) (denom_f_0_valid - p.*grid_f_valid).^-obj.sigma.f;
             ratio_f = @(p) euler_num_f_valid./euler_denom_f(p);
             
             % max price where the denominator is still positive (ratio will
             % be always lower than price in these cases)
-            max_feasible_price_f = denom_f_0 ./ grid_f;
+            max_feasible_price_f = denom_f_0_valid ./ grid_f_valid;
             
-            eq_price_f = -Inf*ones(size(valid_f));
-            if any(valid_f)
+            eq_price_f = -Inf*ones(size(rt1));
+            if ~isempty(n_valid)
                 eq_price_f(valid_f) = bisection(@(p) ratio_f(p) - abs(p),...
-                    0, max_feasible_price_f(valid_f));
+                    0, max_feasible_price_f);
             end
-            eq_price_f(grid_f == 0) = Inf;
+            eq_price_f(:,grid_f == 0) = Inf;
             
         end
         
