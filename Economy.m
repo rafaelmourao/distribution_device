@@ -2,16 +2,16 @@ classdef Economy
     properties
         % Necessary economy parameters
         has_default = true; % By default the model allows for default
-        decrease_A = false; % By default, A's remains constant
+        has_partial_default = true; % and partial default
         
         beta %Intertemporal discount rate
         sigma % Utility function parameter: risk aversion (structure)
         phi %Probability of redemption (Arellano)
         lambda %Government preference parameter: foreigners relative to residents
         tc %Tax rate over CONSUMPTION
-        Ag % Fixed income stream for the government
-        Ar % Fixed income stream for the residents
-        Af % Fixed income stream for the foreginers
+        Ag = 0 % Fixed income stream for the government
+        Ar = 0% Fixed income stream for the residents
+        Af = 0% Fixed income stream for the foreginers
         discount % Discount factor summed on A's
         alpha %Participation of capital on production
         rho % Elasticity of Substitution between capital and labor (=1/(1-rho))
@@ -36,6 +36,7 @@ classdef Economy
         br % Resident bond policy function holdings in case of no default
         bf % Foreign bond policy function holdings in case of no default
         bg % Government bond policy function holdings in case of no default
+        delta % Government open market policy function
         z % Government default policy function
         r % Interest rates without default
         w % Wages without default
@@ -46,8 +47,6 @@ classdef Economy
     properties (Hidden = true)
         % Extended arrays to conform with policy function dimensions
         extended_grid
-        extended_default_r
-        extended_default_w
     end
     
     methods
@@ -58,21 +57,19 @@ classdef Economy
                 obj.has_default = param.has_default;
             end
             
-            if ~isfield(param,'decrease_A') % If A should decrease
-                obj.discount = 0;
-            else
-                obj.discount = param.discount;
+            if isfield(param,'has_partial_default') % if grid is supplied
+                obj.has_partial_default = param.has_partial_default;
             end
-            
+
             % Setting parameters
             obj.beta = param.beta;
             obj.sigma = param.sigma;
             obj.phi = param.phi;
             obj.lambda = param.lambda;
             obj.tc = param.tc;
-            obj.Ag = max(0,param.Ag-obj.discount);
-            obj.Ar = max(0,param.Ar-obj.discount);
-            obj.Af = max(0,param.Af-obj.discount);
+            obj.Ag = param.Ag;
+            obj.Ar = param.Ar;
+            obj.Af = param.Af;
             obj.alpha = param.alpha;
             obj.rho = param.rho;
             obj.e = param.e;
@@ -126,10 +123,10 @@ classdef Economy
                 [obj.n_states,obj.n_bonds,obj.n_bonds]);
             
             %Government
-            %             obj.bg = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);     %     %BONDS policy funtion for the GOVERNMENT
-            obj.bg = obj.br + obj.bf;
+            obj.bg = obj.br + obj.bf; %BONDS policy funtion for the GOVERNMENT
             obj.g = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);            %PUBLIC EXPENDITURE policy funtion for the GOVERNMENT
             obj.z = ones(obj.n_states,obj.n_bonds,obj.n_bonds);       %DEFAULT policy funtion for the GOVERNMENT
+            obj.delta = ones(obj.n_states,obj.n_bonds,obj.n_bonds); %MARKET openess policy function
             
             %% PRICE FUNCTIONS
             
@@ -142,29 +139,69 @@ classdef Economy
             
             obj.q = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);           %Price of Public Bond
             
+            obj = set_default(obj);
+            
+        end
+        
+        function obj = set_default(obj)
             %% Default Outcomes
             
-            obj.default.r = zeros(obj.n_states,1); % Variables in case of default
-            obj.default.w = zeros(obj.n_states,1);
-            obj.default.cr = zeros(obj.n_states,1);
-            obj.default.cf = zeros(obj.n_states,1);
-            obj.default.g = zeros(obj.n_states,1);
-            obj.default.W = zeros(obj.n_states,1);
-            for n = 1:obj.n_states
-                obj.default.r(n) = obj.alpha*(obj.e.f(n).^(obj.rho-1)).*...
-                    ((obj.alpha*(obj.e.f(n).^obj.rho) + (1-obj.alpha)).^(1/obj.rho-1));
-                obj.default.w(n) = (1-obj.alpha)*((obj.alpha*(obj.e.f(n))^(obj.rho)) + (1-obj.alpha))^(1/obj.rho-1);
-                obj.default.cr(n) = obj.Ar + (1/(1+obj.tc))*obj.default.w(n);
-                obj.default.cf(n) = obj.Af + (1/(1+obj.tc))*(1+obj.default.r(n))*obj.e.f(n);
-                obj.default.g(n) = obj.Ag + obj.tc*(obj.default.cr(n) + obj.default.cf(n));
-                obj.default.W(n) =  utility_function(obj.default.cr(n),obj.sigma.r) +...
-                    obj.lambda*utility_function(obj.default.cf(n),obj.sigma.f) ...
-                    +  utility_function(obj.default.g(n),obj.sigma.g);
-                obj.extended_default_r = repmat(obj.default.r,...
-                    [1,obj.n_bonds*obj.n_bonds]);
-                obj.extended_default_w = repmat(obj.default.w,...
-                    [1,obj.n_bonds*obj.n_bonds]);
+            obj.default.z = ones(obj.n_states,obj.n_bonds,obj.n_bonds);
+            obj.default.kr = ones(obj.n_states,obj.n_bonds,obj.n_bonds);
+            obj.default.kf = ones(obj.n_states,obj.n_bonds,obj.n_bonds);
+            obj.default.r = ones(obj.n_states,obj.n_bonds,obj.n_bonds);
+            obj.default.w = ones(obj.n_states,obj.n_bonds,obj.n_bonds);
+            obj.default.cr = ones(obj.n_states,obj.n_bonds,obj.n_bonds);
+            obj.default.cr = ones(obj.n_states,obj.n_bonds,obj.n_bonds);
+            obj.default.g = ones(obj.n_states,obj.n_bonds,obj.n_bonds);
+            obj.default.W = ones(obj.n_states,obj.n_bonds,obj.n_bonds);
+            
+            for i = 1:numel(obj.z)
+                if (i <= obj.n_states || ~obj.has_partial_default)
+                    % "Full default" when Bg = 0
+                    obj.default.z(i) = 0;
+                else
+                    options = optimset('TolX',1e-6);
+                    obj.default.z(i) = fminbnd(@(x) ...
+                        -default_calc(x,i),0,1,options);
+                    if (obj.default.z(i) < 1e-5)
+                        obj.default.z(i) = 0;
+                    elseif (obj.default.z(i) > 1 - 1e-5)
+                        obj.default.z(i) = 1;
+                    end
+                end
+                [~, def] = default_calc(obj.default.z(i),i);
+                obj.default.kr(i) = def.kr;
+                obj.default.kf(i) = def.kf;
+                obj.default.r(i) = def.r;
+                obj.default.w(i) = def.w;
+                obj.default.cr(i) = def.cr;
+                obj.default.cf(i) = def.cf;
+                obj.default.g(i) = def.g;
+                obj.default.W(i) = def.W;
             end
+            
+            
+            function [fval, def] = default_calc(z,i)
+                [n, ~, ~] = ind2sub(size(obj.z),i);
+                def.kr = z.*obj.extended_grid.b_r(i);
+                def.kf = obj.e.f(n) + ...
+                    z.*obj.extended_grid.b_f(i);
+                def.r = obj.alpha*((def.kf+def.kr)^(obj.rho-1)).*...
+                    ((obj.alpha*((def.kf+def.kr)^obj.rho) +...
+                    (1-obj.alpha)).^(1/obj.rho-1));
+                def.w = (1-obj.alpha)*((obj.alpha*((def.kf+def.kr)).^(obj.rho)) ...
+                    + (1-obj.alpha))^(1/obj.rho-1);
+                def.cr = obj.Ar + (1/(1+obj.tc))*(def.w +(1+def.r).*def.kr);
+                def.cf = obj.Af + (1/(1+obj.tc))*(1+def.r).*def.kf;
+                def.g = max(obj.Ag + obj.tc*(def.cr + def.cf) - z.*...
+                    (obj.extended_grid.b_r(i) + obj.extended_grid.b_f(i)),0);
+                def.W =  utility_function(def.cr,obj.sigma.r) +...
+                    obj.lambda*utility_function(def.cf,obj.sigma.f) ...
+                    +  utility_function(def.g,obj.sigma.g);
+                fval = def.W;
+            end
+            
         end
         
         function obj = update(obj, nworkers)
@@ -230,19 +267,21 @@ classdef Economy
             
             obj.Vnd = obj.Wnd + obj.beta*next_Vo;
             
-            obj.Vd = obj.default.W + obj.beta*obj.prob*...
-                (obj.phi * obj.Vo(:,1,1) + (1-obj.phi) * obj.Vd);
+            obj.Vd = obj.default.W + repmat(obj.beta*obj.prob*...
+                (obj.phi * obj.Vo(:,1,1) + (1-obj.phi) * obj.Vd(:,1,1)),...
+                [1,obj.n_bonds,obj.n_bonds]);
             
             % in case of no default
             obj.z = ones(obj.n_states,obj.n_bonds,obj.n_bonds);
+            obj.delta = obj.z;
             obj.Vo = obj.Vnd;
             
             % check where there is default
             if obj.has_default
-                def = bsxfun(@lt,obj.Vnd,obj.Vd);
-                [def_states, ~] = find(def); % retrieving the states of all default occ.
-                obj.z(def) = 0; % updating default decision
-                obj.Vo(def) = obj.Vd(def_states); % updating policy function
+                def = ( obj.Vnd < obj.Vd );
+                obj.z(def) = obj.default.z(def) ; % updating default decision
+                obj.delta(def) = 0;
+                obj.Vo(def) = obj.Vd(def); % updating policy function
             end
         end
         
@@ -301,6 +340,7 @@ classdef Economy
             eft = obj.e.f;
             
             % Future
+            delta1 = obj.delta(:,:);
             rt1 = obj.r(:,:);
             wt1 = obj.w(:,:);
             qt1 = obj.q(:,:);
@@ -312,8 +352,8 @@ classdef Economy
             % In case of default, future interest rate and wages are the
             % default ones
             if obj.has_default
-                rt1(~zt1) = obj.extended_default_r(~zt1);
-                wt1(~zt1) = obj.extended_default_w(~zt1);
+                rt1(~delta1) = obj.default.r(~delta1);
+                wt1(~delta1) = obj.default.w(~delta1);
             end
             
             grid_r = obj.grid.r_aux;
@@ -324,9 +364,9 @@ classdef Economy
             
             num_g = obj.Ag + (obj.tc/(1+obj.tc))*...
                 ((zt1.*bsxfun(@times,(1+rt1),grid_r) + ...
-                wt1 - zt1.*qt1.*brt1) + ...
+                wt1 - delta1.*qt1.*brt1) + ...
                 (1+rt1).*(repmat(obj.e.f,1,l_grid_g) + ...
-                bsxfun(@times,zt1,grid_f)) - zt1.*qt1.*bft1) + ...
+                bsxfun(@times,zt1,grid_f)) - delta1.*qt1.*bft1) + ...
                 zt1.*(qt1.*bgt1 - repmat(grid_g,obj.n_states,1));
             
             % Disregard cases where the numerator is negative independently
@@ -359,7 +399,7 @@ classdef Economy
             
             
             % Find price where euler denominator approaches zero
-            min_feasible_price_g = bsxfun(@rdivide, -obj.A - obj.tc*...
+            min_feasible_price_g = bsxfun(@rdivide, -obj.Ag - obj.tc*...
                 ((1+rt).*brt_1 + wt + ...
                 (1+rt).*(eft + bft_1)) + ...
                 (1+obj.tc)*bgt_1, grid_g);
@@ -400,6 +440,7 @@ classdef Economy
             wt = obj.w(:, id_br, id_bf);
             
             % Future
+            delta1 = obj.delta(:,:);
             rt1 = obj.r(:,:);
             wt1 = obj.w(:,:);
             qt1 = obj.q(:,:);
@@ -409,12 +450,12 @@ classdef Economy
             % In case of default, future interest rate and wages are the
             % default ones
             if obj.has_default
-                rt1(~zt1) = obj.extended_default_r(~zt1);
-                wt1(~zt1) = obj.extended_default_w(~zt1);
+                rt1(~delta1) = obj.default.r(~delta1);
+                wt1(~delta1) = obj.default.w(~delta1);
             end
             
             num_r = obj.Ar + ((1+rt1).^(-1/obj.sigma.r)).*...
-                (zt1.*bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1);
+                (zt1.*bsxfun(@times,(1+rt1),grid_r) + wt1 - delta1.*qt1.*brt1);
             
             euler_num_r = obj.beta*(obj.prob*(zt1.*(num_r.^-obj.sigma.r)));
             euler_num_r(any(num_r)<0) = NaN;
@@ -467,6 +508,7 @@ classdef Economy
             rt = obj.r(:, id_br, id_bf);
             
             % Future
+            delta1 = obj.delta(:,:);
             rt1 = obj.r(:,:);
             qt1 = obj.q(:,:);
             zt1 = obj.z(:,:);
@@ -476,12 +518,12 @@ classdef Economy
             % In case of default, future interest rate and wages are the
             % default ones
             if obj.has_default
-                rt1(~zt1) = obj.extended_default_r(~zt1);
+                rt1(~delta1) = obj.default.r(~delta1);
             end
             
             num_f = obj.Af + (1+rt1).^(-1/obj.sigma.f).*...
                 ((1+rt1).*(repmat(obj.e.f,1,l_grid_g) +...
-                bsxfun(@times,zt1,grid_f)) - zt1.*qt1.*bft1);
+                bsxfun(@times,zt1,grid_f)) - delta1.*qt1.*bft1);
             
             euler_num_f = obj.beta*(obj.prob*(zt1.*(num_f.^-obj.sigma.f)));
             euler_num_f(any(num_f)<0) = NaN;
@@ -525,5 +567,5 @@ classdef Economy
 end
 
 function f = utility_function(x, sigma)
-f = (x.^(1-sigma) - 1)/(1 - sigma);
+    f = (x.^(1-sigma) - 1)/(1 - sigma);
 end
