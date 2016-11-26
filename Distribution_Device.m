@@ -6,17 +6,24 @@ param = [];
 
 param.has_default = true;
 
+param.decrease_A = false;
+param.start_decrease_A = 10;  %Interacion from which A will be reduced
+param.discount_A = 0;          
+
 %Consumers
 param.beta = .8;      %Intertemporal discount rate
 param.sigma.r = 2;    %Utility function parameter: risk aversion
 param.sigma.f = 2;
+param.Ar = 1;     %Resident's fixed income stream
+param.Af = 1;     %Foreigner's fixed income stream
 
 %Government
 param.sigma.g = 2;    %Utility function parameter: risk aversion
 param.phi = .2;    %Probability of redemption (Arellano)
 param.lambda = 1;    %Government preference parameter: foreigners relative to residents
 param.tc = .2;   %Tax rate over CONSUMPTION
-param.A = 1;     %Fixed income stream
+param.Ag = 1;     %Govenment's fixed income stream
+
 
 %Firm
 param.alpha = .2;            %Participation of capital on productio
@@ -47,7 +54,7 @@ iter = Economy(param); % Construct economy with given parameters
 
 epsilon = 1e-3;                                     %Tolerance level for 
 dist = 100;                                         %Distance between previous and current price and bond functions
-t = 1;                                              %Number of interations
+t = 0;                                              %Number of interations
 
 hah = tic;
 while dist > epsilon && t <= 10000
@@ -63,6 +70,11 @@ while dist > epsilon && t <= 10000
     disp('Prices:')
     disp(iter.q(1:10))
     fprintf('Default proportion: %.4f\n',1-mean(iter.z(:))) 
+    
+    if t > param.start_decrease_A
+        param.discount = 0.1*(t - param.start_decrease_A);
+    end
+    
 end
 toc(hah)
 

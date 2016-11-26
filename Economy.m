@@ -2,13 +2,17 @@ classdef Economy
     properties
         % Necessary economy parameters
         has_default = true; % By default the model allows for default
+        decrease_A = false; % By default, A's remains constant
         
         beta %Intertemporal discount rate
         sigma % Utility function parameter: risk aversion (structure)
         phi %Probability of redemption (Arellano)
         lambda %Government preference parameter: foreigners relative to residents
         tc %Tax rate over CONSUMPTION
-        A % Fixed income stream for the government
+        Ag % Fixed income stream for the government
+        Ar % Fixed income stream for the residents
+        Af % Fixed income stream for the foreginers
+        discount % Discount factor summed on A's
         alpha %Participation of capital on production
         rho % Elasticity of Substitution between capital and labor (=1/(1-rho))
         e % shocks to the consumers endowment
@@ -54,13 +58,21 @@ classdef Economy
                 obj.has_default = param.has_default;
             end
             
+            if ~isfield(param,'decrease_A') % If A should decrease
+                obj.discount = 0;
+            else
+                obj.discount = param.discount;
+            end
+            
             % Setting parameters
             obj.beta = param.beta;
             obj.sigma = param.sigma;
             obj.phi = param.phi;
             obj.lambda = param.lambda;
             obj.tc = param.tc;
-            obj.A = param.A;
+            obj.Ag = max(0,param.Ag-obj.discount);
+            obj.Ar = max(0,param.Ar-obj.discount);
+            obj.Af = max(0,param.Af-obj.discount);
             obj.alpha = param.alpha;
             obj.rho = param.rho;
             obj.e = param.e;
@@ -142,9 +154,9 @@ classdef Economy
                 obj.default.r(n) = obj.alpha*(obj.e.f(n).^(obj.rho-1)).*...
                     ((obj.alpha*(obj.e.f(n).^obj.rho) + (1-obj.alpha)).^(1/obj.rho-1));
                 obj.default.w(n) = (1-obj.alpha)*((obj.alpha*(obj.e.f(n))^(obj.rho)) + (1-obj.alpha))^(1/obj.rho-1);
-                obj.default.cr(n) = (1/(1+obj.tc))*obj.default.w(n);
-                obj.default.cf(n) = (1/(1+obj.tc))*(1+obj.default.r(n))*obj.e.f(n);
-                obj.default.g(n) = obj.A + obj.tc*(obj.default.cr(n) + obj.default.cf(n));
+                obj.default.cr(n) = obj.Ar + (1/(1+obj.tc))*obj.default.w(n);
+                obj.default.cf(n) = obj.Af + (1/(1+obj.tc))*(1+obj.default.r(n))*obj.e.f(n);
+                obj.default.g(n) = obj.Ag + obj.tc*(obj.default.cr(n) + obj.default.cf(n));
                 obj.default.W(n) =  utility_function(obj.default.cr(n),obj.sigma.r) +...
                     obj.lambda*utility_function(obj.default.cf(n),obj.sigma.f) ...
                     +  utility_function(obj.default.g(n),obj.sigma.g);
@@ -200,15 +212,15 @@ classdef Economy
                 (1-obj.alpha)*(obj.alpha*((obj.kr+obj.kf).^(obj.rho))...
                 + (1-obj.alpha)).^(1/obj.rho-1);
             
-            obj.cr = (1/(1+obj.tc))*((1+obj.r).*obj.kr...
+            obj.cr = obj.Ar + (1/(1+obj.tc))*((1+obj.r).*obj.kr...
                 + obj.w - obj.q.*obj.br);
             obj.cr(obj.cr<0) = 0;
             
-            obj.cf = (1/(1+obj.tc))*((1+obj.r).*obj.kf...
+            obj.cf = obj.Af + (1/(1+obj.tc))*((1+obj.r).*obj.kf...
                 - obj.q.*obj.bf);
             obj.cf(obj.cf<0) = 0;
             
-            obj.g = obj.A + obj.tc*(obj.cr + obj.cf) + obj.q.*obj.bg - ...
+            obj.g = obj.Ag + obj.tc*(obj.cr + obj.cf) + obj.q.*obj.bg - ...
                 (obj.extended_grid.b_r + obj.extended_grid.b_f);
             obj.g(obj.g<0) = 0;
             
@@ -310,7 +322,7 @@ classdef Economy
             l_grid_g = length(grid_g);
             
             
-            num_g = obj.A + (obj.tc/(1+obj.tc))*...
+            num_g = obj.Ag + (obj.tc/(1+obj.tc))*...
                 ((zt1.*bsxfun(@times,(1+rt1),grid_r) + ...
                 wt1 - zt1.*qt1.*brt1) + ...
                 (1+rt1).*(repmat(obj.e.f,1,l_grid_g) + ...
@@ -325,7 +337,7 @@ classdef Economy
             valid_g(1) = 0;
             valid_g = repmat(valid_g,[obj.n_states,1]);
             
-            denom_g_0 = obj.A + (obj.tc/(1+obj.tc))*...
+            denom_g_0 = obj.Ag + (obj.tc/(1+obj.tc))*...
                 ((1+rt).*brt_1 + wt + ...
                 (1+rt).*(eft + bft_1)) - ...
                 bgt_1; % n_states * n_bonds^2
@@ -401,13 +413,13 @@ classdef Economy
                 wt1(~zt1) = obj.extended_default_w(~zt1);
             end
             
-            num_r = ((1+rt1).^(-1/obj.sigma.r)).*...
+            num_r = obj.Ar + ((1+rt1).^(-1/obj.sigma.r)).*...
                 (zt1.*bsxfun(@times,(1+rt1),grid_r) + wt1 - zt1.*qt1.*brt1);
             
             euler_num_r = obj.beta*(obj.prob*(zt1.*(num_r.^-obj.sigma.r)));
             euler_num_r(any(num_r)<0) = NaN;
             
-            denom_r_0 = (1+rt)*brt_1 + wt;
+            denom_r_0 = obj.Ar + (1+rt)*brt_1 + wt;
             ratio_r_0 = bsxfun(@rdivide,euler_num_r,...
                 (denom_r_0.^-obj.sigma.r));
             
@@ -467,14 +479,14 @@ classdef Economy
                 rt1(~zt1) = obj.extended_default_r(~zt1);
             end
             
-            num_f = (1+rt1).^(-1/obj.sigma.f).*...
+            num_f = obj.Af + (1+rt1).^(-1/obj.sigma.f).*...
                 ((1+rt1).*(repmat(obj.e.f,1,l_grid_g) +...
                 bsxfun(@times,zt1,grid_f)) - zt1.*qt1.*bft1);
             
             euler_num_f = obj.beta*(obj.prob*(zt1.*(num_f.^-obj.sigma.f)));
             euler_num_f(any(num_f)<0) = NaN;
             
-            denom_f_0 = ((1+rt).*(eft + bft_1));
+            denom_f_0 = obj.Af + ((1+rt).*(eft + bft_1));
             ratio_f_0 = bsxfun(@rdivide,euler_num_f,...
                 (denom_f_0.^-obj.sigma.f));
             
