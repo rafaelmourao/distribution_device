@@ -16,10 +16,10 @@ param.Af = 0;     %Foreigner's fixed income stream
 
 %Government
 param.sigma.g = 2;    %Utility function parameter: risk aversion
-param.phi = .2;    %Probability of redemption (Arellano)
+param.phi = .5;    %Probability of redemption (Arellano)
 param.lambda = 1;    %Government preference parameter: foreigners relative to residents
 param.tc = .2;   %Tax rate over CONSUMPTION
-param.Ag = .5;     %Govenment's fixed income stream
+param.Ag = .65;     %Govenment's fixed income stream
 
 
 %Firm
@@ -42,8 +42,8 @@ param.prob = [.4 .5 .1;.3 .4 .3;.1 .5 .4];
 
 %Public Bonds
 param.min_b = 0;   %Minimum value for bonds
-param.max_b = .6;  %Maximum value for bonds
-param.n_bonds = 10;  %Quantity of points on the grid for the investors
+param.max_b = .4;  %Maximum value for bonds
+param.n_bonds = 15;  %Quantity of points on the grid for the investors
 
 %% ITERATIONS
 

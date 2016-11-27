@@ -9,29 +9,19 @@ function econ = economy_trajectory(Economy,id_br,id_bf,state,...
     states = markov_chain(Economy.prob,state,num_periods);
     idx_s = 0 * states;
     idx_s(1) = sub2ind(n_tot_bonds_size,state,id_br,id_bf);
-    econ.delta(1) = 1;
+    econ.delta = ones(1,num_periods);
     
     for i = 1:num_periods-1
-        market_open = rand(1);
-        if econ.delta(i)
+        if (i == 1) || ( Economy.delta(idx_s(i)) && ...
+                ( econ.delta(i-1) || rand(1) < Economy.phi ) )
             id_br_s = find(Economy.grid.b_r == Economy.br(idx_s(i)),1);
             id_bf_s = find(Economy.grid.b_f == Economy.bf(idx_s(i)),1);
         else
-            if market_open > Economy.phi
-                id_br_s = 1;
-                id_bf_s = 1;
-            else
-                id_br_s = find(Economy.grid.b_r == Economy.br(states(i)),1);
-                id_bf_s = find(Economy.grid.b_f == Economy.bf(states(i)),1);
-            end
+            id_br_s = 1;
+            id_bf_s = 1;
+            econ.delta(i) = 0;
         end
         idx_s(i+1) = sub2ind(n_tot_bonds_size,states(i+1),id_br_s,id_bf_s);
-        
-        if econ.delta(i) || market_open < Economy.phi
-            econ.delta(i+1) = Economy.delta(idx_s(i+1));
-        else
-            econ.delta(i+1) = 0;
-        end
     end
     
     econ.idx = idx_s;
