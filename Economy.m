@@ -162,8 +162,12 @@ classdef Economy
                     obj.default.z(i) = 0;
                 else
                     options = optimset('TolX',1e-6);
+                    ub = 1;
+                    while ~isfinite(default_calc(.8*ub,i))
+                        ub = .8*ub;
+                    end
                     obj.default.z(i) = fminbnd(@(x) ...
-                        -default_calc(x,i),0,1,options);
+                        -default_calc(x,i),0,ub,options);
                     if (obj.default.z(i) < 1e-5)
                         obj.default.z(i) = 0;
                     elseif (obj.default.z(i) > 1 - 1e-5)
