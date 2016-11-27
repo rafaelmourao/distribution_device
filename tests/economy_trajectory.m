@@ -9,24 +9,36 @@ function econ = economy_trajectory(Economy,id_br,id_bf,state,...
     states = markov_chain(Economy.prob,state,num_periods);
     idx_s = 0 * states;
     idx_s(1) = sub2ind(n_tot_bonds_size,state,id_br,id_bf);
+    econ.delta(1) = 1;
     
     for i = 1:num_periods-1
-        if Economy.z(idx_s(i))
+        market_open = rand(1);
+        if econ.delta(i)
             id_br_s = find(Economy.grid.b_r == Economy.br(idx_s(i)),1);
             id_bf_s = find(Economy.grid.b_f == Economy.bf(idx_s(i)),1);
         else
-            id_br_s = 1;
-            id_bf_s = 1;
+            if market_open > Economy.phi
+                id_br_s = 1;
+                id_bf_s = 1;
+            else
+                id_br_s = find(Economy.grid.b_r == Economy.br(states(i)),1);
+                id_bf_s = find(Economy.grid.b_f == Economy.bf(states(i)),1);
+            end
         end
         idx_s(i+1) = sub2ind(n_tot_bonds_size,states(i+1),id_br_s,id_bf_s);
+        
+        if econ.delta(i) || market_open < Economy.phi
+            econ.delta(i+1) = Economy.delta(idx_s(i+1));
+        else
+            econ.delta(i+1) = 0;
+        end
     end
     
     econ.idx = idx_s;
     econ.states = states;
     
     % finding the periods with default
-    econ.z = Economy.z(idx_s);
-    def_cases = find(~econ.z);
+    def_cases = find(~econ.delta);
     def_cases_states = states(def_cases);
     
     % case without default
