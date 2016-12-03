@@ -516,7 +516,7 @@ classdef Economy
             rt1 = obj.r(:,:);
             qt1 = obj.q(:,:);
             zt1 = obj.z(:,:);
-            bft1 = obj.br(:,:);
+            bft1 = obj.bf(:,:);
             eft = obj.e.f;
             
             % In case of default, future interest rate and wages are the
