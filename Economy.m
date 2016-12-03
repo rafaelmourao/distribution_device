@@ -331,8 +331,7 @@ classdef Economy
             valid_g(1) = 0;
             
             denom_g_0 = obj.Ag + (obj.tc/(1+obj.tc))*...
-                (((1+rt)*krt + wt) + ...
-                ((1+rt)*kft)) - ...
+                ((1+rt)*krt + wt + (1+rt)*kft) - ...
                 z*bgt_1;
             
             grid_g_valid = grid_g(valid_g);
@@ -398,6 +397,7 @@ classdef Economy
             zt1 = obj.z(:,:);
             rt1 = obj.r(:,:);
             wt1 = obj.w(:,:);
+            krt1 = obj.kr(:,:);
             qt1 = obj.q(:,:);
             brt1 = obj.br(:,:);
             
@@ -407,7 +407,7 @@ classdef Economy
             %            wt1(~zt1) = obj.extended_default_w(~zt1);
             
             num_r = ((1+rt1).^(-1/obj.sigma.r)).*...
-                (zt1.*bsxfun(@times,(1+rt1),grid_r) + wt1 - qt1.*brt1);
+                ((1+rt1).*krt1 + wt1 - qt1.*brt1);
             
             euler_num_r = obj.beta*(probt*(zt1.*(num_r.^-obj.sigma.r)));
             euler_num_r(any(num_r)<0) = NaN;
@@ -447,7 +447,6 @@ classdef Economy
             
             % Variables
             grid_f = obj.grid.f_aux;
-            l_grid_g = length(grid_f);
             
             % Past and present
             probt = obj.prob(n,:);
@@ -464,6 +463,7 @@ classdef Economy
             zt1 = obj.z(:,:);
             rt1 = obj.r(:,:);
             qt1 = obj.q(:,:);
+            kft1 = obj.kf(:,:);
             bft1 = obj.bf(:,:);
             
             % In case of default, future interest rate and wages are the
@@ -471,8 +471,7 @@ classdef Economy
             %            rt1(~zt1) = obj.extended_default_r(~zt1);
             
             num_f = (1+rt1).^(-1/obj.sigma.f).*...
-                ((1+rt1).*(repmat(obj.e.f,1,l_grid_g) +...
-                bsxfun(@times,zt1,grid_f)) - qt1.*bft1);
+                ((1+rt1).*kft1 - qt1.*bft1);
             
             euler_num_f = obj.beta*(probt*(zt1.*(num_f.^-obj.sigma.f)));
             euler_num_f(any(num_f)<0) = NaN;
