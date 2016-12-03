@@ -206,7 +206,11 @@ classdef Economy
             % to buy is lower than the lowest price the government accepts.
             
             if obj.has_default && ~(id_br == 1 && id_bf == 1)
-                z_s = fminbnd(@(x) -welfare(x),0,1);
+                ub = 1; % To make sure that welfare at the ínitial point is finite 
+                while ~isfinite(welfare(.8*ub))
+                    ub = .8*ub;
+                end
+                z_s = fminbnd(@(x) -welfare(x),0,ub);
             else
                 z_s = 1;
             end
