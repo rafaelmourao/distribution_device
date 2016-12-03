@@ -205,7 +205,7 @@ classdef Economy
             % bond portfolio where the highest price both consumers accept
             % to buy is lower than the lowest price the government accepts.
             
-            if obj.has_default
+            if obj.has_default && ~(id_br == 1 && id_bf == 1)
                 z_s = fminbnd(@(x) -welfare(x),0,1);
             else
                 z_s = 1;
@@ -240,6 +240,7 @@ classdef Economy
                         break
                     end
                 end
+                
                 kr_s = z.*obj.grid.b_r(id_br);
                 kf_s = obj.e.f(n) + z.*obj.grid.b_f(id_bf);
                 r_s = ...
@@ -259,7 +260,7 @@ classdef Economy
                 cf_s(cf_s<0) = 0;
                 
                 g_s = obj.Ag + obj.tc*(cr_s + cf_s) + p_s*bg_s - ...
-                    z.*(br_s + bf_s);
+                    z.*(obj.grid.b_r(id_br) + obj.grid.b_f(id_bf));
                 g_s(g_s<0) = 0;
                 
                 W_s = utility_function(cr_s,obj.sigma.r) + ...
@@ -463,7 +464,7 @@ classdef Economy
             zt1 = obj.z(:,:);
             rt1 = obj.r(:,:);
             qt1 = obj.q(:,:);
-            bft1 = obj.br(:,:);
+            bft1 = obj.bf(:,:);
             
             % In case of default, future interest rate and wages are the
             % default ones
