@@ -106,11 +106,9 @@ classdef Economy
             obj.kf = repmat(obj.e.f,[1,obj.n_bonds,obj.n_bonds]);           %CAPITAL policy funtion for FOREIGNERS
             
             %obj.br = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);          %BONDS policy funtion for RESIDENTS
-            obj.br = reshape(kron(obj.grid.r_aux,ones(1,obj.n_states)),...
-                [obj.n_states,obj.n_bonds,obj.n_bonds]);
+            obj.br = obj.extended_grid.b_r;
             %             obj.bf = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);          %BONDS policy funtion for FOREIGNERS
-            obj.bf = reshape(kron(obj.grid.f_aux,ones(1,obj.n_states)),...
-                [obj.n_states,obj.n_bonds,obj.n_bonds]);
+            obj.bf = obj.extended_grid.b_f;
             
             %Government
             %             obj.bg = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);     %     %BONDS policy funtion for the GOVERNMENT
@@ -121,7 +119,7 @@ classdef Economy
             %% PRICE FUNCTIONS
             
             obj.r = obj.alpha*((obj.kr+obj.kf).^(obj.rho-1)).*...
--                ((obj.alpha*((obj.kr+obj.kf).^obj.rho) +...
+                ((obj.alpha*((obj.kr+obj.kf).^obj.rho) +...
                 (1-obj.alpha)).^(1/obj.rho-1));     %Interest Rate
             
             obj.w = (1-obj.alpha)*((obj.alpha*((obj.kr+obj.kf).^obj.rho)...
@@ -129,29 +127,6 @@ classdef Economy
             
             obj.q = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);           %Price of Public Bond
             
-            %% Default Outcomes
-            
-            obj.default.r = zeros(obj.n_states,1); % Variables in case of default
-            obj.default.w = zeros(obj.n_states,1);
-            obj.default.cr = zeros(obj.n_states,1);
-            obj.default.cf = zeros(obj.n_states,1);
-            obj.default.g = zeros(obj.n_states,1);
-            obj.default.W = zeros(obj.n_states,1);
-            for n = 1:obj.n_states
-                obj.default.r(n) = obj.alpha*(obj.e.f(n).^(obj.rho-1)).*...
-                    ((obj.alpha*(obj.e.f(n).^obj.rho) + (1-obj.alpha)).^(1/obj.rho-1));
-                obj.default.w(n) = (1-obj.alpha)*((obj.alpha*(obj.e.f(n))^(obj.rho)) + (1-obj.alpha))^(1/obj.rho-1);
-                obj.default.cr(n) = (1/(1+obj.tc))*obj.default.w(n);
-                obj.default.cf(n) = (1/(1+obj.tc))*(1+obj.default.r(n))*obj.e.f(n);
-                obj.default.g(n) = obj.Ag + obj.tc*(obj.default.cr(n) + obj.default.cf(n));
-                obj.default.W(n) =  utility_function(obj.default.cr(n),obj.sigma.r) +...
-                    obj.lambda*utility_function(obj.default.cf(n),obj.sigma.f) ...
-                    +  utility_function(obj.default.g(n),obj.sigma.g);
-                obj.extended_default_r = repmat(obj.default.r,...
-                    1,obj.n_bonds*obj.n_bonds);
-                obj.extended_default_w = repmat(obj.default.w,...
-                    1,obj.n_bonds*obj.n_bonds);
-            end
         end
         
         function obj = update(obj, nworkers)
@@ -167,7 +142,7 @@ classdef Economy
             bf_s = zeros(n_tot_bonds_size);
             bg_s = zeros(n_tot_bonds_size);
             z_s = zeros(n_tot_bonds_size);
-            next_Vo = zeros(n_tot_bonds_size);
+            next_V = zeros(n_tot_bonds_size);
             
             parfor(i=1:n_tot_bonds,nworkers)
                 
@@ -181,7 +156,7 @@ classdef Economy
                 loc_bf_s = ( obj.grid.b_f == bf_s(i) );
                 
                 % Expected value for next period
-                next_Vo(i) = obj.prob(n,:)*obj.V(:,loc_br_s,loc_bf_s);
+                next_V(i) = obj.prob(n,:)*obj.V(:,loc_br_s,loc_bf_s);
                 
             end
             
@@ -191,9 +166,9 @@ classdef Economy
             obj.bg = bg_s;                          %GOVERNEMNT supply of Bonds
             obj.z = z_s;
             
-            obj.kr = z_s.*obj.extended_grid.b_r;                       %RESIDENTS capital supply
+            obj.kr = obj.z.*obj.extended_grid.b_r;                       %RESIDENTS capital supply
             obj.kf = obj.extended_grid.e_f +...
-                z_s.*obj.extended_grid.b_f;                           %FOREIGNERS capital supply
+                obj.z.*obj.extended_grid.b_f;                           %FOREIGNERS capital supply
             
             obj.r = ...
                 obj.alpha*((obj.kr+obj.kf).^(obj.rho-1)).*...
@@ -213,14 +188,14 @@ classdef Economy
             obj.cf(obj.cf<0) = 0;
             
             obj.g = obj.Ag + obj.tc*(obj.cr + obj.cf) + obj.q.*obj.bg - ...
-                (obj.extended_grid.b_r + obj.extended_grid.b_f);
+                obj.z.*(obj.extended_grid.b_r + obj.extended_grid.b_f);
             obj.g(obj.g<0) = 0;
             
             obj.W = utility_function(obj.cr,obj.sigma.r) + ...
                 obj.lambda*utility_function(obj.cf,obj.sigma.f) + ...
                 utility_function(obj.g,obj.sigma.g);
             
-            obj.V = obj.W + obj.beta*next_Vo;
+            obj.V = obj.W + obj.beta*next_V;
             
         end
         
@@ -265,8 +240,8 @@ classdef Economy
                         break
                     end
                 end
-                kr_s = z.*br_s;
-                kf_s = obj.e.f(n) + z.*bf_s;
+                kr_s = z.*obj.grid.b_r(id_br);
+                kf_s = obj.e.f(n) + z.*obj.grid.b_f(id_bf);
                 r_s = ...
                     obj.alpha*((kr_s+kf_s).^(obj.rho-1)).*...
                     ((obj.alpha*((kr_s+kf_s).^obj.rho) +...
@@ -284,7 +259,7 @@ classdef Economy
                 cf_s(cf_s<0) = 0;
                 
                 g_s = obj.Ag + obj.tc*(cr_s + cf_s) + p_s*bg_s - ...
-                    (br_s + bf_s);
+                    z.*(br_s + bf_s);
                 g_s(g_s<0) = 0;
                 
                 W_s = utility_function(cr_s,obj.sigma.r) + ...
@@ -311,8 +286,8 @@ classdef Economy
             brt_1 = z*obj.grid.b_r(id_br);
             bft_1 = z*obj.grid.b_f(id_bf);
             bgt_1 = brt_1 + bft_1;
-            krt = z.*obj.grid.r_aux(id_br);
-            kft = obj.e.f(n) + z.*obj.grid.f_aux(id_bf);
+            krt = brt_1;
+            kft = obj.e.f(n) + bft_1;
             rt = ...
                 obj.alpha*((krt+kft).^(obj.rho-1)).*...
                 ((obj.alpha*((krt+kft).^obj.rho) +...
@@ -364,7 +339,7 @@ classdef Economy
             euler_denom_g_valid = @(p) (denom_g_0 + ...
                 (1/(1+obj.tc))*p.*grid_g_valid).^-obj.sigma.g;
             
-            euler_num_g = obj.beta*(probt*(zt1.*(num_g.^-obj.sigma.g))); %Está certo o 'zt1' aqui
+            euler_num_g = obj.beta*(probt*(zt1.*(num_g.^-obj.sigma.g)));
             euler_num_g(any(num_g)<0) = NaN; % just in case
             euler_num_g_valid = euler_num_g(valid_g);
             
@@ -407,9 +382,10 @@ classdef Economy
             
             % Past and present
             probt = obj.prob(n,:);
-            brt_1 = z*obj.grid.b_r(id_br);            
-            krt = z.*obj.grid.r_aux(id_br);
-            kft = obj.e.f(n) + z.*obj.grid.f_aux(id_bf);
+            brt_1 = z*obj.grid.b_r(id_br);
+            bft_1 = z*obj.grid.b_f(id_bf);
+            krt = brt_1;
+            kft = obj.e.f(n) + bft_1;
             rt = ...
                 obj.alpha*((krt+kft).^(obj.rho-1)).*...
                 ((obj.alpha*((krt+kft).^obj.rho) +...
@@ -433,7 +409,7 @@ classdef Economy
             num_r = ((1+rt1).^(-1/obj.sigma.r)).*...
                 (zt1.*bsxfun(@times,(1+rt1),grid_r) + wt1 - qt1.*brt1);
             
-            euler_num_r = obj.beta*(probt*(zt1.*(num_r.^-obj.sigma.r))); %Está certo o 'zt1' aqui tb
+            euler_num_r = obj.beta*(probt*(zt1.*(num_r.^-obj.sigma.r)));
             euler_num_r(any(num_r)<0) = NaN;
             
             denom_r_0 = (1+rt)*z*brt_1 + wt;
@@ -475,9 +451,10 @@ classdef Economy
             
             % Past and present
             probt = obj.prob(n,:);
+            brt_1 = z*obj.grid.b_r(id_br);
             bft_1 = z*obj.grid.b_f(id_bf);            
-            krt = z.*obj.grid.r_aux(id_br);
-            kft = obj.e.f(n) + z.*obj.grid.f_aux(id_bf);
+            krt = brt_1;
+            kft = obj.e.f(n) + bft_1;
             rt = ...
                 obj.alpha*((krt+kft).^(obj.rho-1)).*...
                 ((obj.alpha*((krt+kft).^obj.rho) +...
@@ -498,7 +475,7 @@ classdef Economy
                 ((1+rt1).*(repmat(obj.e.f,1,l_grid_g) +...
                 bsxfun(@times,zt1,grid_f)) - qt1.*bft1);
             
-            euler_num_f = obj.beta*(probt*(zt1.*(num_f.^-obj.sigma.f))); %Está certo o 'zt1' aqui tb
+            euler_num_f = obj.beta*(probt*(zt1.*(num_f.^-obj.sigma.f)));
             euler_num_f(any(num_f)<0) = NaN;
             
             denom_f_0 = ((1+rt)*(eft + z*bft_1));
