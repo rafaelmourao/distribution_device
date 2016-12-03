@@ -3,6 +3,7 @@
 %% ECONOMY PARAMETERS
 
 param = [];
+param.has_default = true;
 
 %Consumers
 param.beta = .8;      %Intertemporal discount rate
@@ -19,8 +20,8 @@ param.tc = .3;   %Tax rate over CONSUMPTION
 param.Ag = 0;     %Fixed income stream
 
 %Firm
-param.alpha = .5;            %Participation of capital on productio
-param.rho = -1;              %Elasticity of Substitution between capital and labor is 1/2 (=1/(1-rho))
+param.alpha = .3;            %Participation of capital on productio
+param.rho = .5;              %Elasticity of Substitution between capital and labor is 1/2 (=1/(1-rho))
 
 %Foreigner wealth evolution
 param.e.f = [1;2;5];
@@ -38,8 +39,9 @@ param.prob = [.4 .5 .1;.3 .4 .3;.1 .5 .4];
 
 %Public Bonds
 param.min_b = 0;   %Minimum value for bonds
-param.max_b = .2;  %Maximum value for bonds
+param.max_b = .1;  %Maximum value for bonds
 param.n_bonds = 5;  %Quantity of points on the grid for the investors
+
 
 %% ITERATIONS
 
