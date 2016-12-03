@@ -301,6 +301,8 @@ classdef Economy
             zt1 = obj.z(:,:);
             rt1 = obj.r(:,:);
             wt1 = obj.w(:,:);
+            krt1 = obj.kr(:,:);
+            kft1 = obj.kf(:,:);
             qt1 = obj.q(:,:);
             brt1 = obj.br(:,:);
             bft1 = obj.bf(:,:);
@@ -311,16 +313,12 @@ classdef Economy
             %            rt1(~zt1) = obj.extended_default_r(~zt1);
             %            wt1(~zt1) = obj.extended_default_w(~zt1);
             
-            grid_r = obj.grid.r_aux;
-            grid_f = obj.grid.f_aux;
             grid_g = obj.grid.b_g;
-            l_grid_g = length(grid_g);
             
             num_g = obj.Ag + (obj.tc/(1+obj.tc))*...
-                ((zt1.*bsxfun(@times,(1+rt1),grid_r) + ...
-                wt1 - qt1.*brt1) + ...
-                (1+rt1).*(repmat(obj.e.f,1,l_grid_g) + ...
-                bsxfun(@times,zt1,grid_f)) - qt1.*bft1) + ...
+                ((1+rt1).*krt1 + ...
+                wt1 - qt1.*brt1 + ...
+                (1+rt1).*kft1 - qt1.*bft1) + ...
                 qt1.*bgt1 - zt1.*repmat(grid_g,obj.n_states,1);
             
             % Disregard cases where the numerator is negative independently
