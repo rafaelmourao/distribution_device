@@ -283,11 +283,11 @@ classdef Economy
             
             % Past and present
             probt = obj.prob(n,:);
-            brt_1 = z*obj.grid.b_r(id_br);
-            bft_1 = z*obj.grid.b_f(id_bf);
+            brt_1 = obj.grid.b_r(id_br);
+            bft_1 = obj.grid.b_f(id_bf);
             bgt_1 = brt_1 + bft_1;
-            krt = brt_1;
-            kft = obj.e.f(n) + bft_1;
+            krt = z*brt_1;
+            kft = obj.e.f(n) + z*bft_1;
             rt = ...
                 obj.alpha*((krt+kft).^(obj.rho-1)).*...
                 ((obj.alpha*((krt+kft).^obj.rho) +...
@@ -295,7 +295,6 @@ classdef Economy
             wt = ...
                 (1-obj.alpha)*(obj.alpha*((krt+kft).^(obj.rho))...
                 + (1-obj.alpha)).^(1/obj.rho-1);
-            eft = obj.e.f(n);
             
             % Future
             zt1 = obj.z(:,:);
@@ -331,8 +330,8 @@ classdef Economy
             valid_g(1) = 0;
             
             denom_g_0 = obj.Ag + (obj.tc/(1+obj.tc))*...
-                (((1+rt)*z*brt_1 + wt) + ...
-                ((1+rt)*(eft + z*bft_1))) - ...
+                (((1+rt)*krt + wt) + ...
+                ((1+rt)*kft)) - ...
                 z*bgt_1;
             
             grid_g_valid = grid_g(valid_g);
@@ -348,8 +347,8 @@ classdef Economy
             
             % Find price where euler denominator approaches zero
             min_feasible_price_g = ( -obj.Ag - obj.tc*...
-                ((1+rt)*z*brt_1 + wt + ...
-                (1+rt)*(eft + z*bft_1)) + ...
+                ((1+rt)*krt + wt + ...
+                (1+rt)*kft) + ...
                 (1+obj.tc)*z*bgt_1 ) ./ grid_g;
             
             % Find a price where Euler ratio is below price or set a
@@ -382,10 +381,10 @@ classdef Economy
             
             % Past and present
             probt = obj.prob(n,:);
-            brt_1 = z*obj.grid.b_r(id_br);
-            bft_1 = z*obj.grid.b_f(id_bf);
-            krt = brt_1;
-            kft = obj.e.f(n) + bft_1;
+            brt_1 = obj.grid.b_r(id_br);
+            bft_1 = obj.grid.b_f(id_bf);
+            krt = z*brt_1;
+            kft = obj.e.f(n) + z*bft_1;
             rt = ...
                 obj.alpha*((krt+kft).^(obj.rho-1)).*...
                 ((obj.alpha*((krt+kft).^obj.rho) +...
@@ -412,7 +411,7 @@ classdef Economy
             euler_num_r = obj.beta*(probt*(zt1.*(num_r.^-obj.sigma.r)));
             euler_num_r(any(num_r)<0) = NaN;
             
-            denom_r_0 = (1+rt)*z*brt_1 + wt;
+            denom_r_0 = (1+rt)*krt + wt;
             ratio_r_0 = euler_num_r ./ (denom_r_0.^-obj.sigma.r);
             
             % Disregard cases where the ratio is not well defined
@@ -451,10 +450,10 @@ classdef Economy
             
             % Past and present
             probt = obj.prob(n,:);
-            brt_1 = z*obj.grid.b_r(id_br);
-            bft_1 = z*obj.grid.b_f(id_bf);            
-            krt = brt_1;
-            kft = obj.e.f(n) + bft_1;
+            brt_1 = obj.grid.b_r(id_br);
+            bft_1 = obj.grid.b_f(id_bf);            
+            krt = z*brt_1;
+            kft = obj.e.f(n) + z*bft_1;
             rt = ...
                 obj.alpha*((krt+kft).^(obj.rho-1)).*...
                 ((obj.alpha*((krt+kft).^obj.rho) +...
@@ -465,7 +464,6 @@ classdef Economy
             rt1 = obj.r(:,:);
             qt1 = obj.q(:,:);
             bft1 = obj.br(:,:);
-            eft = obj.e.f(n);
             
             % In case of default, future interest rate and wages are the
             % default ones
@@ -478,7 +476,7 @@ classdef Economy
             euler_num_f = obj.beta*(probt*(zt1.*(num_f.^-obj.sigma.f)));
             euler_num_f(any(num_f)<0) = NaN;
             
-            denom_f_0 = ((1+rt)*(eft + z*bft_1));
+            denom_f_0 = (1+rt)*kft;
             ratio_f_0 = euler_num_f ./ (denom_f_0.^-obj.sigma.f);
             
             % Disregard cases where the ratio is not well defined
