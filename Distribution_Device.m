@@ -38,8 +38,8 @@ param.prob = [.4 .5 .1;.3 .4 .3;.1 .5 .4];
 
 %Public Bonds
 param.min_b = 0;   %Minimum value for bonds
-param.max_b = .6;  %Maximum value for bonds
-param.n_bonds = 10;  %Quantity of points on the grid for the investors
+param.max_b = .2;  %Maximum value for bonds
+param.n_bonds = 5;  %Quantity of points on the grid for the investors
 
 %% ITERATIONS
 
@@ -54,10 +54,10 @@ while dist > epsilon && t <= 10000
     t = t+1;
     
     old_iter = iter;
-    iter = iter.update(20); % Sets maximum number of parallel workers
+    iter = iter.update(0); % Sets maximum number of parallel workers
 
     time = toc;
-    dist = max(abs(iter.Vo(:) - old_iter.Vo(:)));
+    dist = max(abs(iter.V(:) - old_iter.V(:)));
     fprintf('Iter: %d, distance: %.6f, time: %.2f seconds\n',t,dist,time) 
     disp('Prices:')
     disp(iter.q(1:10))

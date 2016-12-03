@@ -23,10 +23,8 @@ classdef Economy
         default % default outcomes (as below)
         
         % Iteration variables
-        Vd % Value function in case of default
-        Vnd % Value function in case of no default
-        Vo % Value function
-        Wnd % Welfare in case of no default
+        V % Value function
+        W % Welfare
         cr % Resident consumption policy function in case of no default
         cf % Foreign consumption policy function in case of no default
         kr % Resident capital policy function in case of no default
@@ -95,9 +93,7 @@ classdef Economy
             
             % Value functions
             
-            obj.Vd = zeros(obj.n_states,1);                                 %Value function in case of DEFAULT
-            obj.Vnd = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);          %Value function in case of NO DEFAULT
-            obj.Vo = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);           %Value function for the OPTION of DEFAULT
+            obj.V = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);
             
             %% POLICY FUNCTIONS
             
@@ -124,16 +120,11 @@ classdef Economy
             
             %% PRICE FUNCTIONS
             
-            obj.r = @(z) obj.alpha*((z.*obj.br + z.*obj.bf + ...
-                repmat(obj.e.f,[1,obj.n_bonds,obj.n_bonds]))...
-                .^(obj.rho-1)).*...
-                ((obj.alpha*((z.*obj.br + z.*obj.bf + ...
-                repmat(obj.e.f,[1,obj.n_bonds,obj.n_bonds])).^obj.rho) +...
+            obj.r = obj.alpha*((obj.kr+obj.kf).^(obj.rho-1)).*...
+-                ((obj.alpha*((obj.kr+obj.kf).^obj.rho) +...
                 (1-obj.alpha)).^(1/obj.rho-1));     %Interest Rate
             
-            obj.w = @(z) (1-obj.alpha)*((obj.alpha*...
-                ((z.*obj.br + z.*obj.bf + ...
-                repmat(obj.e.f,[1,obj.n_bonds,obj.n_bonds])).^obj.rho)...
+            obj.w = (1-obj.alpha)*((obj.alpha*((obj.kr+obj.kf).^obj.rho)...
                 + (1-obj.alpha)).^(1/obj.rho-1));           %Wage
             
             obj.q = zeros(obj.n_states,obj.n_bonds,obj.n_bonds);           %Price of Public Bond
@@ -178,7 +169,6 @@ classdef Economy
             z_s = zeros(n_tot_bonds_size);
             next_Vo = zeros(n_tot_bonds_size);
             
-            
             parfor(i=1:n_tot_bonds,nworkers)
                 
                 [n, id_br, id_bf] = ind2sub(n_tot_bonds_size,i);
@@ -189,8 +179,10 @@ classdef Economy
                 
                 loc_br_s = ( obj.grid.b_r == br_s(i) );
                 loc_bf_s = ( obj.grid.b_f == bf_s(i) );
+                
                 % Expected value for next period
-                next_Vo(i) = obj.prob(n,:)*obj.Vo(:,loc_br_s,loc_bf_s);
+                next_Vo(i) = obj.prob(n,:)*obj.V(:,loc_br_s,loc_bf_s);
+                
             end
             
             obj.q = p_s;               %Equilibrium price for the Bonds' market
@@ -203,20 +195,20 @@ classdef Economy
             obj.kf = obj.extended_grid.e_f +...
                 z_s.*obj.extended_grid.b_f;                           %FOREIGNERS capital supply
             
-%            obj.r = ...
-%                obj.alpha*((obj.kr+obj.kf).^(obj.rho-1)).*...
-%                ((obj.alpha*((obj.kr+obj.kf).^obj.rho) +...
-%                (1-obj.alpha)).^(1/obj.rho-1));
+            obj.r = ...
+                obj.alpha*((obj.kr+obj.kf).^(obj.rho-1)).*...
+                ((obj.alpha*((obj.kr+obj.kf).^obj.rho) +...
+                (1-obj.alpha)).^(1/obj.rho-1));
             
-%            obj.w = ...
-%                (1-obj.alpha)*(obj.alpha*((obj.kr+obj.kf).^(obj.rho))...
-%                + (1-obj.alpha)).^(1/obj.rho-1);
+            obj.w = ...
+                (1-obj.alpha)*(obj.alpha*((obj.kr+obj.kf).^(obj.rho))...
+                + (1-obj.alpha)).^(1/obj.rho-1);
             
-            obj.cr = obj.Ar + (1/(1+obj.tc))*((1+obj.r(obj.z)).*obj.kr...
-                + obj.w(obj.z) - obj.q.*obj.br);
+            obj.cr = obj.Ar + (1/(1+obj.tc))*((1+obj.r).*obj.kr...
+                + obj.w - obj.q.*obj.br);
             obj.cr(obj.cr<0) = 0;
             
-            obj.cf = obj.Af + (1/(1+obj.tc))*((1+obj.r(obj.z)).*obj.kf...
+            obj.cf = obj.Af + (1/(1+obj.tc))*((1+obj.r).*obj.kf...
                 - obj.q.*obj.bf);
             obj.cf(obj.cf<0) = 0;
             
@@ -224,24 +216,12 @@ classdef Economy
                 (obj.extended_grid.b_r + obj.extended_grid.b_f);
             obj.g(obj.g<0) = 0;
             
-            obj.Wnd = utility_function(obj.cr,obj.sigma.r) + ...
+            obj.W = utility_function(obj.cr,obj.sigma.r) + ...
                 obj.lambda*utility_function(obj.cf,obj.sigma.f) + ...
                 utility_function(obj.g,obj.sigma.g);
             
-            obj.Vnd = obj.Wnd + obj.beta*next_Vo;
+            obj.V = obj.W + obj.beta*next_Vo;
             
-%            obj.Vd = obj.default.W + obj.beta*obj.prob*...
-%                (obj.phi * obj.Vo(:,1,1) + (1-obj.phi) * obj.Vd);
-            
-            % in case of no default
-%            obj.z = ones(obj.n_states,obj.n_bonds,obj.n_bonds);
-            obj.Vo = obj.Vnd;
-            
-            % check where there is default
-%            def = bsxfun(@lt,obj.Vnd,obj.Vd);
-%            [def_states, ~] = find(def); % retrieving the states of all default occ.
-%            obj.z(def) = 0; % updating default decision
-%            obj.Vo(def) = obj.Vd(def_states); % updating policy function
         end
         
         function [p_s, br_s, bf_s, bg_s, z_s] = Solution(obj, n, id_br, id_bf)
@@ -250,36 +230,75 @@ classdef Economy
             % bond portfolio where the highest price both consumers accept
             % to buy is lower than the lowest price the government accepts.
             
-            % Default (corner) solution
-            p_s = 0;
-            br_s = 0;
-            bf_s = 0;
-            bg_s = 0;
-            z_s = 1; %ARMENGUE!! SÓ PARA PODER RODAR O PROGRAMA!!
-            
-            eq_price_g = eq_prices_government(obj, n, id_br, id_bf, z_s);
-            eq_price_r = eq_prices_residents(obj, n, id_br, id_bf, z_s);
-            eq_price_f = eq_prices_foreigners(obj, n, id_br, id_bf, z_s);
-            
-            prices = min(eq_price_f,eq_price_r);
-            prices(eq_price_g > prices) = 0;
-            
-            [~, sorted_bonds] = sort(obj.grid.b_g,2,'descend');
-            for i = sorted_bonds
-                % Accept solution if price is positive and finite
-                % If none found, solution is the corner (0,0) solution with
-                % zero price
-                if ( prices(i) > 0 && isfinite(prices(i)))
-                    p_s = prices(i);
-                    br_s = obj.grid.r_aux(i);
-                    bf_s = obj.grid.f_aux(i);
-                    bg_s = obj.grid.b_g(i);
-                    break
-                end
+            if obj.has_default
+                z_s = fminbnd(@(x) -welfare(x),0,1);
+            else
+                z_s = 1;
             end
+            [~, p_s, br_s, bf_s, bg_s] = welfare(z_s);
+            
+            function [fval, p_s, br_s, bf_s, bg_s] = welfare(z)
+                
+                % Default (corner) solution
+                p_s = 0;
+                br_s = 0;
+                bf_s = 0;
+                bg_s = 0;
+                
+                eq_price_g = eq_prices_government(obj, n, id_br, id_bf, z);
+                eq_price_r = eq_prices_residents(obj, n, id_br, id_bf, z);
+                eq_price_f = eq_prices_foreigners(obj, n, id_br, id_bf, z);
+                
+                prices = min(eq_price_f,eq_price_r);
+                prices(eq_price_g > prices) = 0;
+                
+                [~, sorted_bonds] = sort(obj.grid.b_g,2,'descend');
+                for i = sorted_bonds
+                    % Accept solution if price is positive and finite
+                    % If none found, solution is the corner (0,0) solution with
+                    % zero price
+                    if ( prices(i) > 0 && isfinite(prices(i)))
+                        p_s = prices(i);
+                        br_s = obj.grid.r_aux(i);
+                        bf_s = obj.grid.f_aux(i);
+                        bg_s = obj.grid.b_g(i);
+                        break
+                    end
+                end
+                kr_s = z.*br_s;
+                kf_s = obj.e.f(n) + z.*bf_s;
+                r_s = ...
+                    obj.alpha*((kr_s+kf_s).^(obj.rho-1)).*...
+                    ((obj.alpha*((kr_s+kf_s).^obj.rho) +...
+                    (1-obj.alpha)).^(1/obj.rho-1));
+                w_s = ...
+                    (1-obj.alpha)*(obj.alpha*((kr_s+kf_s).^(obj.rho))...
+                    + (1-obj.alpha)).^(1/obj.rho-1);
+                
+                cr_s = obj.Ar + (1/(1+obj.tc))*((1+r_s).*kr_s...
+                    + w_s - p_s.*br_s);
+                cr_s(cr_s<0) = 0;
+                
+                cf_s = obj.Af + (1/(1+obj.tc))*((1+r_s).*kf_s...
+                    - p_s.*bf_s);
+                cf_s(cf_s<0) = 0;
+                
+                g_s = obj.Ag + obj.tc*(cr_s + cf_s) + p_s*bg_s - ...
+                    (br_s + bf_s);
+                g_s(g_s<0) = 0;
+                
+                W_s = utility_function(cr_s,obj.sigma.r) + ...
+                    obj.lambda*utility_function(cf_s,obj.sigma.f) + ...
+                    utility_function(g_s,obj.sigma.g);
+                
+                fval = W_s + obj.beta*obj.prob(n,:)*obj.V(:,i);
+                
+            end
+            
+            
         end
         
-        function eq_price_g = eq_prices_government(obj, n, id_br, id_bf, z_s)
+        function eq_price_g = eq_prices_government(obj, n, id_br, id_bf, z)
             % Calculation of the minimal positive price the government may accept
             % to sell the combination of bonds through a bisection
             % procedure. Equals infinity for the cases where the government
@@ -289,21 +308,24 @@ classdef Economy
             
             % Past and present
             probt = obj.prob(n,:);
-            brt_1 = z_s*obj.grid.b_r(id_br);
-            bft_1 = z_s*obj.grid.b_f(id_bf);
+            brt_1 = z*obj.grid.b_r(id_br);
+            bft_1 = z*obj.grid.b_f(id_bf);
             bgt_1 = brt_1 + bft_1;
-            rt = obj.r(z_s);
-            rt = rt(n, id_br, id_bf);
-            wt = obj.w(z_s);
-            wt = wt(n, id_br, id_bf);
+            krt = z.*obj.grid.r_aux(id_br);
+            kft = obj.e.f(n) + z.*obj.grid.f_aux(id_bf);
+            rt = ...
+                obj.alpha*((krt+kft).^(obj.rho-1)).*...
+                ((obj.alpha*((krt+kft).^obj.rho) +...
+                (1-obj.alpha)).^(1/obj.rho-1));
+            wt = ...
+                (1-obj.alpha)*(obj.alpha*((krt+kft).^(obj.rho))...
+                + (1-obj.alpha)).^(1/obj.rho-1);
             eft = obj.e.f(n);
             
             % Future
             zt1 = obj.z(:,:);
-            rt1 = obj.r(obj.z);
-            rt1 = rt1(:,:);
-            wt1 = obj.w(obj.z);
-            wt1 = wt1(:,:);
+            rt1 = obj.r(:,:);
+            wt1 = obj.w(:,:);
             qt1 = obj.q(:,:);
             brt1 = obj.br(:,:);
             bft1 = obj.bf(:,:);
@@ -311,14 +333,14 @@ classdef Economy
             
             % In case of default, future interest rate and wages are the
             % default ones
-%            rt1(~zt1) = obj.extended_default_r(~zt1);
-%            wt1(~zt1) = obj.extended_default_w(~zt1);
+            %            rt1(~zt1) = obj.extended_default_r(~zt1);
+            %            wt1(~zt1) = obj.extended_default_w(~zt1);
             
             grid_r = obj.grid.r_aux;
             grid_f = obj.grid.f_aux;
             grid_g = obj.grid.b_g;
             l_grid_g = length(grid_g);
-                   
+            
             num_g = obj.Ag + (obj.tc/(1+obj.tc))*...
                 ((zt1.*bsxfun(@times,(1+rt1),grid_r) + ...
                 wt1 - qt1.*brt1) + ...
@@ -334,9 +356,9 @@ classdef Economy
             valid_g(1) = 0;
             
             denom_g_0 = obj.Ag + (obj.tc/(1+obj.tc))*...
-                (((1+rt)*z_s*brt_1 + wt) + ...
-                ((1+rt)*(eft + z_s*bft_1))) - ...
-                z_s*bgt_1;
+                (((1+rt)*z*brt_1 + wt) + ...
+                ((1+rt)*(eft + z*bft_1))) - ...
+                z*bgt_1;
             
             grid_g_valid = grid_g(valid_g);
             euler_denom_g_valid = @(p) (denom_g_0 + ...
@@ -351,9 +373,9 @@ classdef Economy
             
             % Find price where euler denominator approaches zero
             min_feasible_price_g = ( -obj.Ag - obj.tc*...
-                ((1+rt)*z_s*brt_1 + wt + ...
-                (1+rt)*(eft + z_s*bft_1)) + ...
-                (1+obj.tc)*z_s*bgt_1 ) ./ grid_g;
+                ((1+rt)*z*brt_1 + wt + ...
+                (1+rt)*(eft + z*bft_1)) + ...
+                (1+obj.tc)*z*bgt_1 ) ./ grid_g;
             
             % Find a price where Euler ratio is below price or set a
             % maximum of 1e4;
@@ -375,7 +397,7 @@ classdef Economy
             
         end
         
-        function eq_price_r = eq_prices_residents(obj, n, id_br, id_bf, z_s)
+        function eq_price_r = eq_prices_residents(obj, n, id_br, id_bf, z)
             % Calculation of the maximal prices the residents may accept to
             % buy the bond portfolio. Equals infinity if resident doesn't
             % buy anything, and zero is she accepts any positive price.
@@ -385,25 +407,28 @@ classdef Economy
             
             % Past and present
             probt = obj.prob(n,:);
-            brt_1 = z_s*obj.grid.b_r(id_br);
-            rt = obj.r(z_s);
-            rt = rt(n, id_br, id_bf);
-            wt = obj.w(z_s);
-            wt = wt(n, id_br, id_bf);
+            brt_1 = z*obj.grid.b_r(id_br);            
+            krt = z.*obj.grid.r_aux(id_br);
+            kft = obj.e.f(n) + z.*obj.grid.f_aux(id_bf);
+            rt = ...
+                obj.alpha*((krt+kft).^(obj.rho-1)).*...
+                ((obj.alpha*((krt+kft).^obj.rho) +...
+                (1-obj.alpha)).^(1/obj.rho-1));
+            wt = ...
+                (1-obj.alpha)*(obj.alpha*((krt+kft).^(obj.rho))...
+                + (1-obj.alpha)).^(1/obj.rho-1);
             
             % Future
             zt1 = obj.z(:,:);
-            rt1 = obj.r(obj.z);
-            rt1 = rt1(:,:);
-            wt1 = obj.w(obj.z);
-            wt1 = wt1(:,:);
+            rt1 = obj.r(:,:);
+            wt1 = obj.w(:,:);
             qt1 = obj.q(:,:);
             brt1 = obj.br(:,:);
             
             % In case of default, future interest rate and wages are the
             % default ones
-%            rt1(~zt1) = obj.extended_default_r(~zt1);
-%            wt1(~zt1) = obj.extended_default_w(~zt1);
+            %            rt1(~zt1) = obj.extended_default_r(~zt1);
+            %            wt1(~zt1) = obj.extended_default_w(~zt1);
             
             num_r = ((1+rt1).^(-1/obj.sigma.r)).*...
                 (zt1.*bsxfun(@times,(1+rt1),grid_r) + wt1 - qt1.*brt1);
@@ -411,7 +436,7 @@ classdef Economy
             euler_num_r = obj.beta*(probt*(zt1.*(num_r.^-obj.sigma.r))); %Está certo o 'zt1' aqui tb
             euler_num_r(any(num_r)<0) = NaN;
             
-            denom_r_0 = (1+rt)*z_s*brt_1 + wt;
+            denom_r_0 = (1+rt)*z*brt_1 + wt;
             ratio_r_0 = euler_num_r ./ (denom_r_0.^-obj.sigma.r);
             
             % Disregard cases where the ratio is not well defined
@@ -439,7 +464,7 @@ classdef Economy
             eq_price_r(grid_r == 0) = Inf;
         end
         
-        function eq_price_f = eq_prices_foreigners(obj, n, id_br, id_bf, z_s)
+        function eq_price_f = eq_prices_foreigners(obj, n, id_br, id_bf, z)
             % Calculation of the maximal prices the foreigner may accept to
             % buy the bond portfolio. Equals infinity if foreigner doesn't
             % buy anything, and zero is she accepts any positive price.
@@ -450,21 +475,24 @@ classdef Economy
             
             % Past and present
             probt = obj.prob(n,:);
-            bft_1 = z_s*obj.grid.b_f(id_bf);
-            rt = obj.r(z_s);
-            rt = rt(n, id_br, id_bf);
+            bft_1 = z*obj.grid.b_f(id_bf);            
+            krt = z.*obj.grid.r_aux(id_br);
+            kft = obj.e.f(n) + z.*obj.grid.f_aux(id_bf);
+            rt = ...
+                obj.alpha*((krt+kft).^(obj.rho-1)).*...
+                ((obj.alpha*((krt+kft).^obj.rho) +...
+                (1-obj.alpha)).^(1/obj.rho-1));
             
             % Future
             zt1 = obj.z(:,:);
-            rt1 = obj.r(obj.z);
-            rt1 = rt1(:,:);
+            rt1 = obj.r(:,:);
             qt1 = obj.q(:,:);
             bft1 = obj.br(:,:);
             eft = obj.e.f(n);
             
             % In case of default, future interest rate and wages are the
             % default ones
-%            rt1(~zt1) = obj.extended_default_r(~zt1);
+            %            rt1(~zt1) = obj.extended_default_r(~zt1);
             
             num_f = (1+rt1).^(-1/obj.sigma.f).*...
                 ((1+rt1).*(repmat(obj.e.f,1,l_grid_g) +...
@@ -473,7 +501,7 @@ classdef Economy
             euler_num_f = obj.beta*(probt*(zt1.*(num_f.^-obj.sigma.f))); %Está certo o 'zt1' aqui tb
             euler_num_f(any(num_f)<0) = NaN;
             
-            denom_f_0 = ((1+rt)*(eft + z_s*bft_1));
+            denom_f_0 = ((1+rt)*(eft + z*bft_1));
             ratio_f_0 = euler_num_f ./ (denom_f_0.^-obj.sigma.f);
             
             % Disregard cases where the ratio is not well defined
@@ -505,5 +533,5 @@ classdef Economy
 end
 
 function f = utility_function(x, sigma)
-f = (x.^(1-sigma) - 1)/(1 - sigma);
+    f = (x.^(1-sigma) - 1)/(1 - sigma);
 end
