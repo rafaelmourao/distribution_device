@@ -8,6 +8,7 @@ classdef Economy
         sigma % Utility function parameter: risk aversion (structure)
         phi %Probability of redemption (Arellano)
         lambda %Government preference parameter: foreigners relative to residents
+        theta %Discount factor over utility of public good
         tc %Tax rate over CONSUMPTION
         Ag = 0 % Fixed income stream for the government
         Ar = 0% Fixed income stream for the residents
@@ -66,6 +67,7 @@ classdef Economy
             obj.sigma = param.sigma;
             obj.phi = param.phi;
             obj.lambda = param.lambda;
+            obj.theta = param.theta;
             obj.tc = param.tc;
             obj.Ag = param.Ag;
             obj.Ar = param.Ar;
@@ -200,9 +202,9 @@ classdef Economy
                 def.cf = obj.Af + (1/(1+obj.tc))*(1+def.r).*def.kf;
                 def.g = max(obj.Ag + obj.tc*(def.cr + def.cf) - z.*...
                     (obj.extended_grid.b_r(i) + obj.extended_grid.b_f(i)),0);
-                def.W =  utility_function(def.cr,obj.sigma.r) +...
-                    obj.lambda*utility_function(def.cf,obj.sigma.f) ...
-                    +  utility_function(def.g,obj.sigma.g);
+                def.W =  obj.lambda*utility_function(def.cr,obj.sigma.r) +...
+                    (1-obj.lambda)*utility_function(def.cf,obj.sigma.f) ...
+                    +  obj.theta*utility_function(def.g,obj.sigma.g);
                 fval = def.W;
             end
             
@@ -265,9 +267,9 @@ classdef Economy
                 (obj.extended_grid.b_r + obj.extended_grid.b_f);
             obj.g(obj.g<0) = 0;
             
-            obj.Wnd = utility_function(obj.cr,obj.sigma.r) + ...
-                obj.lambda*utility_function(obj.cf,obj.sigma.f) + ...
-                utility_function(obj.g,obj.sigma.g);
+            obj.Wnd = obj.lambda*utility_function(obj.cr,obj.sigma.r) + ...
+                (1-obj.lambda)*utility_function(obj.cf,obj.sigma.f) + ...
+                obj.theta*utility_function(obj.g,obj.sigma.g);
             
             obj.Vnd = obj.Wnd + obj.beta*next_Vo;
             

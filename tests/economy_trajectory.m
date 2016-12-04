@@ -32,7 +32,7 @@ function econ = economy_trajectory(Economy,id_br,id_bf,state,...
     def_cases_states = states(def_cases);
     
     % case without default
-    fields = {'br','bf','bg','r','w','cr','cf','kr','kf','g'};
+    fields = {'q','br','bf','bg','r','w','cr','cf','kr','kf','g'};
     for i = 1:length(fields)
         field_name = fields{i};
         econ.(field_name) = Economy.(field_name)(idx_s);
