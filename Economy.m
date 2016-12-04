@@ -285,6 +285,7 @@ classdef Economy
             % check where there is default
             if obj.has_default
                 def = ( obj.Vnd < obj.Vd );
+                def(:,1,1) = false;
                 obj.z(def) = obj.default.z(def) ; % updating default decision
                 obj.delta(def) = 0;
                 obj.Vo(def) = obj.Vd(def); % updating policy function

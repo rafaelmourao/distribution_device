@@ -16,27 +16,29 @@ param.Af = 0;     %Foreigner's fixed income stream
 
 %Government
 param.sigma.g = 2;    %Utility function parameter: risk aversion
-param.phi = .3;    %Probability of redemption (Arellano)
+param.phi = .8;    %Probability of redemption (Arellano)
 param.lambda = 1/2;    %Government preference parameter: foreigners relative to residents
-param.theta = 1;
+param.theta = .1;
 param.tc = .3;   %Tax rate over CONSUMPTION
-param.Ag = .3;     %Govenment's fixed income stream
+param.Ag = 0;     %Govenment's fixed income stream
 
 
 %Firm
 param.alpha = .3;            %Participation of capital on productio
-param.rho = -1;              %Elasticity of Substitution between capital and labor is 1/2 (=1/(1-rho))
+param.rho = .5;              %Elasticity of Substitution between capital and labor is 1/2 (=1/(1-rho))
 
 
 % Matrix: discretization of AR(1) process
-param.n_s = 5;          % Number of states of nature
-param.mu = .5;           % Average of foreigner shock
+param.n_states = 10;          % Number of states of nature
+param.mu = .2;           % Average of foreigner shock
 param.gamma = .5;       % Autoregressive coefficient
 param.nu = 1;           % Variance of stochastic shock
 param.kappa = 2;        % Number of SD that will deviate from the mean to...
                         % form the grid 
-[param.e.f , param.prob] = ar1(param);
-                        
+[param.e.f , param.prob] = discrete_ar1(param.n_states, param.mu, param.gamma,...
+    param.nu, param.kappa);
+
+param.e.f
                         
 % Matrix: old version (still working though)
 %param.e.f = [.5;10;15];
@@ -57,8 +59,8 @@ param.kappa = 2;        % Number of SD that will deviate from the mean to...
 % GRID
 %Public Bonds
 param.min_b = 0;   %Minimum value for bonds
-param.max_b = 3;  %Maximum value for bonds
-param.n_bonds = 15;  %Quantity of points on the grid for the investors
+param.max_b = 1.5;  %Maximum value for bonds
+param.n_bonds = 20;  %Quantity of points on the grid for the investors
 
 %% ITERATIONS
 
@@ -87,34 +89,8 @@ end
 toc(hah)
 
 addpath('plots/')
-plot_quantities(iter)
-plot_default(iter)
-plot_prices(iter)
+% plot_quantities(iter)
+% plot_default(iter)
+% plot_prices(iter)
 
-function [S, P] = ar1(param)
-
-    % basic parameters
-    n_s = param.n_s;
-    mu = param.mu;
-    gamma = param.gamma;
-    nu = param.nu;
-    kappa = param.kappa;
-
-    % grid for shock
-    nu_s = nu/sqrt(1-gamma^2);
-    mu_s = mu/(1-gamma);
-    smin = mu_s - kappa*nu_s;
-    smax = mu_s + kappa*nu_s;
-    sstep = (smax - smin)/(n_s-1);
-    S = exp(linspace(smin,smax,n_s))';
-
-    % transition matrix
-    normarg1 = (smin - mu - gamma*log(S))/nu + 0.5*sstep/nu;
-    P(:,1) = 0.5 + 0.5*erf(normarg1/sqrt(2));
-    for j = 2:(n_s-1)
-        normarg1 = (log(S(j)) - mu - gamma*log(S))/nu + 0.5*sstep/nu;
-        normarg2 = (log(S(j)) - mu - gamma*log(S))/nu - 0.5*sstep/nu;
-        P(:,j) = 0.5*erf(normarg1/sqrt(2)) - 0.5*erf(normarg2/sqrt(2));
-    end
-    P(:,n_s) = 1 - sum(P(:,1:(n_s-1))')';
-end
+est = economy_trajectory(iter,1,1,param.n_states,1)
