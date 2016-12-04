@@ -93,4 +93,4 @@ addpath('plots/')
 % plot_default(iter)
 % plot_prices(iter)
 
-est = economy_trajectory(iter,1,1,param.n_states,1)
+est = economy_trajectory(iter,1,1,param.n_states,100,1);
